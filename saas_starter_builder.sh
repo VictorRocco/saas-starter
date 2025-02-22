@@ -2,9 +2,9 @@
 
 # --- Colors (for nicer output) ---
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+YELLOW='\033[0;33m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+RESET='\033[0m' # No Color
 
 # --- Helper Functions ---
 
@@ -77,7 +77,7 @@ check_templates() {
 
     for template in "${required_templates[@]}"; do
         if [ ! -f "$script_dir/saas_starter_templates/$template" ]; then
-            echo -e "${YELLOW}Error: Template file not found: $template${NC}"
+            echo -e "${YELLOW}Error: Template file not found: $template${RESET}"
             echo "Please ensure all template files are present in $script_dir/saas_starter_templates/"
             exit 1
         fi
@@ -107,7 +107,7 @@ fi
 
 # Check for django-admin
 if ! command -v django-admin &> /dev/null; then
-    echo -e "${YELLOW}Error: django-admin is not installed. Please install Django and try again.${NC}"
+    echo -e "${YELLOW}Error: django-admin is not installed. Please install Django and try again.${RESET}"
     exit 1
 fi
 
@@ -126,12 +126,12 @@ read -p "Project name: " project_name
 
 # --- Check if project directory already exists ---
 if [ -d "$project_name" ]; then
-    echo -e "${RED}Error: Project directory '$project_name' already exists.${NC} Please run '${YELLOW}rm -rf $project_name${NC}' to delete the existing project first.  \e[1mUse this command with extreme caution! Make sure you have a backup if needed.\e[0m"
+    echo -e "${RED}Error: Project directory '$project_name' already exists.${RESET} Please run '${YELLOW}rm -rf $project_name${RESET}' to delete the existing project first.  \e[1mUse this command with extreme caution! Make sure you have a backup if needed.\e[0m"
     exit 1
 fi
 
 # --- Create Project Directory ---
-echo -e "${GREEN}Creating project directory...${NC}"
+echo -e "${GREEN}Creating project directory...${RESET}"
 mkdir "$project_name"
 cd "$project_name"
 
@@ -139,11 +139,11 @@ cd "$project_name"
 check_templates "$script_dir"
 
 # --- Create docker-compose.yml ---
-echo -e "${GREEN}Creating docker-compose.yml...${NC}"
+echo -e "${GREEN}Creating docker-compose.yml...${RESET}"
 PROJECT_NAME="$project_name" PG_USER="$pg_user" PG_PASSWORD="$pg_password" envsubst < "$script_dir/saas_starter_templates/docker-compose.yml.template" > "docker-compose.yml"
 
 # --- Create a .env file ---
-echo -e "${GREEN}Creating .env file...${NC}"
+echo -e "${GREEN}Creating .env file...${RESET}"
 cat <<EOF > .env
 DEBUG=True
 SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')
@@ -153,32 +153,32 @@ EMAIL_HOST_PASSWORD=${pg_password}
 EOF
 
 # --- Create a basic Dockerfile ---
-echo -e "${GREEN}Creating Dockerfile...${NC}"
+echo -e "${GREEN}Creating Dockerfile...${RESET}"
 PG_USER="$pg_user" PG_EMAIL="$pg_email" PG_PASSWORD="$pg_password" envsubst < "$script_dir/saas_starter_templates/Dockerfile.template" > "Dockerfile"
 
 # --- Create .dockerignore ---
-echo -e "${GREEN}Creating .dockerignore...${NC}"
+echo -e "${GREEN}Creating .dockerignore...${RESET}"
 cp "$script_dir/saas_starter_templates/.dockerignore.template" ".dockerignore"
 
 # --- Create Django Project ---
-echo -e "${GREEN}Creating Django project...${NC}"
+echo -e "${GREEN}Creating Django project...${RESET}"
 django-admin startproject core .
 
 # --- Create Apps ---
-echo -e "${GREEN}Creating apps...${NC}"
+echo -e "${GREEN}Creating apps...${RESET}"
 apps=(public users)  # Add or remove apps as needed
 for app in "${apps[@]}"; do
   create_app "$app"
 done
 
 # --- Create Project-Level Directories ---
-echo -e "${GREEN}Creating Project-Level Directories...${NC}"
+echo -e "${GREEN}Creating Project-Level Directories...${RESET}"
 mkdir templates
 mkdir static
 mkdir templates/components
 
 # --- Configure core/settings.py ---
-echo -e "${GREEN}Configuring core/settings.py...${NC}"
+echo -e "${GREEN}Configuring core/settings.py...${RESET}"
 if [ -f "$script_dir/saas_starter_templates/core/settings.py.template" ]; then
     # Create a string with all app names for INSTALLED_APPS
     APPS_STRING=""
@@ -187,31 +187,31 @@ if [ -f "$script_dir/saas_starter_templates/core/settings.py.template" ]; then
     done
     PROJECT_NAME="$project_name" APPS_LIST="$APPS_STRING" envsubst < "$script_dir/saas_starter_templates/core/settings.py.template" > "core/settings.py"
 else
-    echo -e "${YELLOW}Error: settings.py template not found at $script_dir/saas_starter_templates/core/settings.py.template${NC}"
+    echo -e "${YELLOW}Error: settings.py template not found at $script_dir/saas_starter_templates/core/settings.py.template${RESET}"
     exit 1
 fi
 
 # --- Configure core/urls.py ---
-echo -e "${GREEN}Configuring core/urls.py...${NC}"
+echo -e "${GREEN}Configuring core/urls.py...${RESET}"
 if [ -f "$script_dir/saas_starter_templates/core/urls.py.template" ]; then
     PROJECT_NAME="$project_name" envsubst < "$script_dir/saas_starter_templates/core/urls.py.template" > "core/urls.py"
 else
-    echo -e "${YELLOW}Error: urls.py template not found at $script_dir/saas_starter_templates/core/urls.py.template${NC}"
+    echo -e "${YELLOW}Error: urls.py template not found at $script_dir/saas_starter_templates/core/urls.py.template${RESET}"
     exit 1
 fi
 
 # --- Create base Templates ---
-echo -e "${GREEN}Creating base Templates...${NC}"
+echo -e "${GREEN}Creating base Templates...${RESET}"
 template_path="$script_dir/saas_starter_templates/templates/base.html.template"
 if [ -f "$template_path" ]; then
     cp "$template_path" "templates/base.html"
 else
-    echo -e "${YELLOW}Error: base.html template not found at $template_path${NC}"
+    echo -e "${YELLOW}Error: base.html template not found at $template_path${RESET}"
     exit 1
 fi
 
 # --- Create a requirements.txt file. ---
-echo -e "${GREEN}Creating requirements.txt...${NC}"
+echo -e "${GREEN}Creating requirements.txt...${RESET}"
 cat <<EOF > requirements.txt
 Django>=5.0.1
 psycopg2-binary>=2.9.9
@@ -219,18 +219,22 @@ python-dotenv>=1.0.0
 whitenoise>=6.6.0
 EOF
 
+# --- Create tracking file ---
+echo -e "${GREEN}Creating tracking file...${RESET}"
+echo "{\"project_name\": \"$project_name\"}" > ../saas_starter_tracking.json
+
 # --- Build and start the application using Docker Compose ---
-echo -e "${GREEN}Building and starting the application...${NC}"
+echo -e "${GREEN}Building and starting the application...${RESET}"
 $DOCKER_COMPOSE build
 $DOCKER_COMPOSE up -d
 
-echo -e "${GREEN}Project '$project_name' created and started successfully.${NC}"
+echo -e "${GREEN}Project '$project_name' created and started successfully.${RESET}"
 echo "The application is running in Docker containers."
 echo "To access the application, open your web browser and go to: http://localhost:8000"
 echo ""
 printf "Available make commands:\n"
-printf "• To start the application: ${YELLOW}make up${NC}\n"
-printf "• To stop the application: ${YELLOW}make down${NC}\n"
-printf "• To remove the project: ${YELLOW}make clean${NC}\n"
-printf "• To view logs: ${YELLOW}make logs${NC}\n"
-printf "• To see all available commands: ${YELLOW}make help${NC}\n"
+printf "• To start the application: ${YELLOW}make up${RESET}\n"
+printf "• To stop the application: ${YELLOW}make down${RESET}\n"
+printf "• To remove the project: ${YELLOW}make clean${RESET}\n"
+printf "• To view logs: ${YELLOW}make logs${RESET}\n"
+printf "• To see all available commands: ${YELLOW}make help${RESET}\n"
