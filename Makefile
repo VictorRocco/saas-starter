@@ -76,37 +76,37 @@ check:
 	@echo "Checking system dependencies..."
 	@bash -c 'set -e; \
         if ! which python3 > /dev/null 2>&1; then \
-            printf "\033[0;31m❌ python3 is not installed\033[0m\n"; \
+            printf "$(RED)❌ python3 is not installed$(RESET)\n"; \
             exit 1; \
         else \
-            printf "\033[0;32m✅ python3 is installed at %s\033[0m\n" "$$(which python3)"; \
+            printf "$(GREEN)✅ python3 is installed at %s$(RESET)\n" "$$(which python3)"; \
         fi; \
         CURRENT_PYTHON_VERSION=$$(python3 -c "import sys; print(sys.version_info[0:2][0], sys.version_info[0:2][1])"); \
         if ! python3 -c "import sys; exit(0 if sys.version_info[:2] >= (3,8) else 1)" 2>/dev/null; then \
-            printf "\033[0;31m❌ Python version %s is not sufficient (required >= $(MIN_PYTHON_VERSION))\033[0m\n" "$$CURRENT_PYTHON_VERSION"; \
+            printf "$(RED)❌ Python version %s is not sufficient (required >= $(MIN_PYTHON_VERSION))$(RESET)\n" "$$CURRENT_PYTHON_VERSION"; \
             exit 1; \
         else \
-            printf "\033[0;32m✅ Python version is %s\033[0m\n" "$$CURRENT_PYTHON_VERSION"; \
+            printf "$(GREEN)✅ Python version is %s$(RESET)\n" "$$CURRENT_PYTHON_VERSION"; \
         fi; \
         if ! which pip3 > /dev/null 2>&1; then \
-            printf "\033[0;31m❌ pip3 is not installed\033[0m\n"; \
+            printf "$(RED)❌ pip3 is not installed$(RESET)\n"; \
             exit 1; \
         else \
-            printf "\033[0;32m✅ pip3 is installed at %s\033[0m\n" "$$(which pip3)"; \
+            printf "$(GREEN)✅ pip3 is installed at %s$(RESET)\n" "$$(which pip3)"; \
         fi; \
         if ! which docker > /dev/null 2>&1; then \
-            printf "\033[0;31m❌ docker is not installed\033[0m\n"; \
+            printf "$(RED)❌ docker is not installed$(RESET)\n"; \
             exit 1; \
         else \
-            printf "\033[0;32m✅ docker is installed at %s\033[0m\n" "$$(which docker)"; \
+            printf "$(GREEN)✅ docker is installed at %s$(RESET)\n" "$$(which docker)"; \
         fi; \
         if ! docker compose version > /dev/null 2>&1; then \
-            printf "\033[0;31m❌ docker compose (v2) is not installed\033[0m\n"; \
+            printf "$(RED)❌ docker compose (v2) is not installed$(RESET)\n"; \
             exit 1; \
         else \
-            printf "\033[0;32m✅ docker compose (v2) is installed\033[0m\n"; \
+            printf "$(GREEN)✅ docker compose (v2) is installed$(RESET)\n"; \
         fi; \
-        printf "\033[0;32m✅ All system dependencies are satisfied\033[0m\n"; \
+        printf "$(GREEN)✅ All system dependencies are satisfied$(RESET)\n"; \
     '
 
 build: check
