@@ -7,15 +7,15 @@ DOCKER_COMPOSE_COMMAND := docker compose
 
 # Add minimum version requirements
 MIN_PYTHON_VERSION := 3.8
-MIN_PIP_VERSION := 20.0
-MIN_DOCKER_VERSION := 20.0
-MIN_DOCKER_COMPOSE_VERSION := 2.0
+MIN_PIP_VERSION := 22.0
+MIN_DOCKER_VERSION := 24.0
+MIN_DOCKER_COMPOSE_VERSION := 2.30
 
 # --- Colors ---
-RED := "\033[0;31m"
-GREEN := "\033[0;32m"
-YELLOW := "\033[0;33m"
-RESET := "\033[0m" # Reset to default color
+RED := \033[0;31m
+GREEN := \033[0;32m
+YELLOW := \033[0;33m
+RESET := \033[0m
 
 # --- Load tracking information ---
 load_tracking_info = $(if $(wildcard ../saas_starter_tracking.json), \
@@ -29,7 +29,7 @@ define check_version
 		echo "$(RED)❌ $(1) is not installed$(RESET)"; \
 		exit 1; \
 	else \
-		echo "$(GREEN)✅ $(1) is installed at $$(which $(1))$(RESET)"; \
+		printf '%s✅ %s is installed at %s%s\n' "$(GREEN)" "$(1)" "$$(which $(1))" "$(RESET)"; \
 	fi
 endef
 
@@ -74,17 +74,40 @@ help:
 
 check:
 	@echo "Checking system dependencies..."
-	$(call check_version,python3)
-	$(call check_python_version)
-	$(call check_version,pip3)
-	$(call check_version,docker)
-	@if ! docker compose version > /dev/null 2>&1; then \
-		echo "$(RED)❌ docker compose (v2) is not installed$(RESET)"; \
-		exit 1; \
-	else \
-		echo "$(GREEN)✅ docker compose (v2) is installed$(RESET)"; \
-	fi
-	@echo "$(GREEN)✅ All system dependencies are satisfied$(RESET)"
+	@bash -c 'set -e; \
+        if ! which python3 > /dev/null 2>&1; then \
+            printf "\033[0;31m❌ python3 is not installed\033[0m\n"; \
+            exit 1; \
+        else \
+            printf "\033[0;32m✅ python3 is installed at %s\033[0m\n" "$$(which python3)"; \
+        fi; \
+        CURRENT_PYTHON_VERSION=$$(python3 -c "import sys; print(sys.version_info[0:2][0], sys.version_info[0:2][1])"); \
+        if ! python3 -c "import sys; exit(0 if sys.version_info[:2] >= (3,8) else 1)" 2>/dev/null; then \
+            printf "\033[0;31m❌ Python version %s is not sufficient (required >= $(MIN_PYTHON_VERSION))\033[0m\n" "$$CURRENT_PYTHON_VERSION"; \
+            exit 1; \
+        else \
+            printf "\033[0;32m✅ Python version is %s\033[0m\n" "$$CURRENT_PYTHON_VERSION"; \
+        fi; \
+        if ! which pip3 > /dev/null 2>&1; then \
+            printf "\033[0;31m❌ pip3 is not installed\033[0m\n"; \
+            exit 1; \
+        else \
+            printf "\033[0;32m✅ pip3 is installed at %s\033[0m\n" "$$(which pip3)"; \
+        fi; \
+        if ! which docker > /dev/null 2>&1; then \
+            printf "\033[0;31m❌ docker is not installed\033[0m\n"; \
+            exit 1; \
+        else \
+            printf "\033[0;32m✅ docker is installed at %s\033[0m\n" "$$(which docker)"; \
+        fi; \
+        if ! docker compose version > /dev/null 2>&1; then \
+            printf "\033[0;31m❌ docker compose (v2) is not installed\033[0m\n"; \
+            exit 1; \
+        else \
+            printf "\033[0;32m✅ docker compose (v2) is installed\033[0m\n"; \
+        fi; \
+        printf "\033[0;32m✅ All system dependencies are satisfied\033[0m\n"; \
+    '
 
 build: check
 	./saas_starter_builder.sh
