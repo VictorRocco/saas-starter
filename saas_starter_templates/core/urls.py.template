@@ -6,9 +6,7 @@ from django.conf.urls.static import static
 
 # Project level urlpatterns.
 urlpatterns = [
+    path('admin/', admin.site.urls),
     path('', include('public.urls')),
     path('users/', include('users.urls')),
-    path('private/', include('private.urls')),
-    path('admin/', admin.site.urls),
-    path('dashboard/', include('admin.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) 

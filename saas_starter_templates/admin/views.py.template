@@ -19,10 +19,10 @@ def dashboard(request):
     return render(request, 'admin/dashboard.html', context)
 
 @user_passes_test(is_admin)
-def user_list(request):
+def users_list(request):
     """User list view"""
     users = User.objects.all().order_by('-date_joined')
-    return render(request, 'admin/user_list.html', {'users': users})
+    return render(request, 'admin/users_list.html', {'users': users})
 
 @user_passes_test(is_admin)
 def user_create(request):
@@ -30,7 +30,7 @@ def user_create(request):
     if request.method == 'POST':
         # Add user creation logic here
         messages.success(request, 'User created successfully!')
-        return redirect('admin:user_list')
+        return redirect('admin:users_list')
     return render(request, 'admin/user_form.html')
 
 @user_passes_test(is_admin)
@@ -40,7 +40,7 @@ def user_edit(request, pk):
     if request.method == 'POST':
         # Add user update logic here
         messages.success(request, 'User updated successfully!')
-        return redirect('admin:user_list')
+        return redirect('admin:users_list')
     return render(request, 'admin/user_form.html', {'user': user})
 
 @user_passes_test(is_admin)
@@ -50,7 +50,7 @@ def user_delete(request, pk):
     if request.method == 'POST':
         user.delete()
         messages.success(request, 'User deleted successfully!')
-        return redirect('admin:user_list')
+        return redirect('admin:users_list')
     return render(request, 'admin/user_confirm_delete.html', {'user': user})
 
 @user_passes_test(is_admin)

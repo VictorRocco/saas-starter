@@ -41,8 +41,8 @@ Or companies who want to add a web user interface to their offered product or se
 ## STARTER DATABASE
 - Administrator: 
   - user: admin.
+  - password: adminpasswd
   - email: admin@test.com
-  - password: adminpass
 
 ## PROJECT INITIALIZATION 
 
