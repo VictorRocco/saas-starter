@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - ${PROJECT_NAME}{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="container">
+        <div class="level">
+            <div class="level-left">
+                <div class="level-item">
+                    <h1 class="title">Welcome, {{ user.get_full_name|default:user.username }}!</h1>
+                </div>
+            </div>
+            <div class="level-right">
+                <div class="level-item">
+                    <div class="buttons">
+                        <a href="{% url 'users:profile' %}" class="button is-light">
+                            <span class="icon">
+                                <i class="fas fa-user-cog"></i>
+                            </span>
+                            <span>Profile Settings</span>
+                        </a>
+                        <a href="{% url 'private:settings' %}" class="button is-primary">
+                            <span class="icon">
+                                <i class="fas fa-cog"></i>
+                            </span>
+                            <span>Dashboard Settings</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="columns is-multiline">
+            {% for widget in widgets %}
+            <div class="column is-4">
+                <div class="box"
+                     hx-get="{% url 'private:load_widget' %}"
+                     hx-trigger="load"
+                     hx-swap="innerHTML">
+                    <div class="has-text-centered">
+                        <span class="icon is-large">
+                            <i class="fas fa-spinner fa-pulse"></i>
+                        </span>
+                        <p>Loading widget...</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="columns">
+            <div class="column is-8">
+                <div class="box">
+                    <h2 class="title is-4">Recent Activity</h2>
+                    <div class="content">
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <div class="timeline-marker is-primary"></div>
+                                <div class="timeline-content">
+                                    <p class="heading">Just now</p>
+                                    <p>Logged into dashboard</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-marker is-info"></div>
+                                <div class="timeline-content">
+                                    <p class="heading">2 hours ago</p>
+                                    <p>Updated profile information</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-marker"></div>
+                                <div class="timeline-content">
+                                    <p class="heading">Yesterday</p>
+                                    <p>Completed onboarding</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="column is-4">
+                <div class="box">
+                    <h2 class="title is-4">Quick Actions</h2>
+                    <div class="buttons are-medium">
+                        <button class="button is-primary is-fullwidth" 
+                                hx-post="/action1"
+                                hx-swap="none">
+                            <span class="icon">
+                                <i class="fas fa-plus"></i>
+                            </span>
+                            <span>New Action</span>
+                        </button>
+                        <button class="button is-info is-fullwidth"
+                                hx-post="/action2"
+                                hx-swap="none">
+                            <span class="icon">
+                                <i class="fas fa-sync"></i>
+                            </span>
+                            <span>Refresh Data</span>
+                        </button>
+                        <button class="button is-success is-fullwidth"
+                                hx-post="/action3"
+                                hx-swap="none">
+                            <span class="icon">
+                                <i class="fas fa-download"></i>
+                            </span>
+                            <span>Export Report</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    margin-top: 1rem;
+}
+.timeline-marker {
+    border-radius: 50%;
+    height: 12px;
+    width: 12px;
+    background-color: #dbdbdb;
+    display: block;
+    margin: 0.5rem;
+}
+.timeline-marker.is-primary {
+    background-color: #00d1b2;
+}
+.timeline-marker.is-info {
+    background-color: #3298dc;
+}
+.timeline-item {
+    display: flex;
+    margin-bottom: 1rem;
+}
+.timeline-content {
+    margin-left: 1rem;
+}
+.timeline-content .heading {
+    font-size: 0.8rem;
+    color: #7a7a7a;
+    margin-bottom: 0.25rem;
+}
+</style>
+{% endblock %} 

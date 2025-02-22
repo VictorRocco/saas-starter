@@ -12,7 +12,7 @@ A Saas starter for python developers.
 - Bulma CSS (plain CSS styling).
 - PostgreSQL (database).
 - Deployment: .env + Docker + Uvicorn.
-- Environment: localhost + Railway.
+- Environment: localhost (docker) + Railway.
 
 ## STARTER PAGES
 - Public: 
@@ -35,12 +35,19 @@ A Saas starter for python developers.
   - Settings: Settings page.
   - Users CRUD.
 
-## PROJECT INITIALIZATION QUESTIONS
+## STARTER DATABASE
+- Administrator: 
+  - user: admin.
+  - email: admin@test.com
+  - password: adminpass
+
+## PROJECT INITIALIZATION 
+
+./saas_starter_builder.sh
+
+Questions:
 
 Project name: string
-Use PostgresSQL: y/N
-  - admin username: string
-  - admin password: string
-  - admin email: string
+
 
 

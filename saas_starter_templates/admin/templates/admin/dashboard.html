@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - ${PROJECT_NAME}{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="container">
+        <h1 class="title">Admin Dashboard</h1>
+
+        <div class="columns is-multiline">
+            <div class="column is-3">
+                <div class="box has-text-centered">
+                    <p class="heading">Total Users</p>
+                    <p class="title">{{ total_users }}</p>
+                </div>
+            </div>
+            <div class="column is-3">
+                <div class="box has-text-centered">
+                    <p class="heading">Active Users</p>
+                    <p class="title">{{ active_users }}</p>
+                </div>
+            </div>
+            <div class="column is-3">
+                <div class="box has-text-centered">
+                    <p class="heading">Staff Users</p>
+                    <p class="title">{{ staff_users }}</p>
+                </div>
+            </div>
+            <div class="column is-3">
+                <div class="box has-text-centered">
+                    <p class="heading">New Users (Today)</p>
+                    <p class="title">{{ new_users_today|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="box">
+            <div class="level">
+                <div class="level-left">
+                    <div class="level-item">
+                        <h2 class="title is-4">User Management</h2>
+                    </div>
+                </div>
+                <div class="level-right">
+                    <div class="level-item">
+                        <a href="{% url 'admin:user_create' %}" class="button is-primary">
+                            <span class="icon">
+                                <i class="fas fa-user-plus"></i>
+                            </span>
+                            <span>Add User</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field">
+                <div class="control has-icons-left">
+                    <input class="input" type="text" placeholder="Search users..."
+                           hx-get="{% url 'admin:user_search' %}"
+                           hx-trigger="keyup changed delay:500ms"
+                           hx-target="#user-list">
+                    <span class="icon is-small is-left">
+                        <i class="fas fa-search"></i>
+                    </span>
+                </div>
+            </div>
+
+            <div class="field is-grouped">
+                <div class="control">
+                    <label class="checkbox">
+                        <input type="checkbox" 
+                               hx-get="{% url 'admin:user_filter' %}"
+                               hx-trigger="change"
+                               hx-target="#user-list"
+                               name="is_active"
+                               value="true">
+                        Active Only
+                    </label>
+                </div>
+                <div class="control">
+                    <label class="checkbox">
+                        <input type="checkbox"
+                               hx-get="{% url 'admin:user_filter' %}"
+                               hx-trigger="change"
+                               hx-target="#user-list"
+                               name="is_staff"
+                               value="true">
+                        Staff Only
+                    </label>
+                </div>
+            </div>
+
+            <div id="user-list">
+                {% include "admin/partials/user_list.html" %}
+            </div>
+        </div>
+
+        <div class="columns">
+            <div class="column is-6">
+                <div class="box">
+                    <h2 class="title is-4">System Status</h2>
+                    <table class="table is-fullwidth">
+                        <tbody>
+                            <tr>
+                                <td>System Status</td>
+                                <td><span class="tag is-success">Running</span></td>
+                            </tr>
+                            <tr>
+                                <td>Last Backup</td>
+                                <td>2 hours ago</td>
+                            </tr>
+                            <tr>
+                                <td>Server Load</td>
+                                <td>
+                                    <progress class="progress is-primary" value="15" max="100">15%</progress>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="column is-6">
+                <div class="box">
+                    <h2 class="title is-4">Recent Activity</h2>
+                    <div class="content">
+                        <ul>
+                            <li>User 'admin' logged in (5 minutes ago)</li>
+                            <li>System backup completed (2 hours ago)</li>
+                            <li>New user registered (3 hours ago)</li>
+                            <li>Settings updated (5 hours ago)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

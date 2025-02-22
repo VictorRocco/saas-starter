@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}HTMX Examples - ${PROJECT_NAME}{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="container">
+        <h1 class="title">HTMX Examples</h1>
+        <div class="content">
+            <p>This page demonstrates various HTMX features integrated with Django.</p>
+        </div>
+
+        <div class="box">
+            <h3 class="title is-4">Load More Content</h3>
+            <div id="content-list">
+                <div class="content">
+                    <p>Initial content here...</p>
+                </div>
+                <button class="button is-primary"
+                        hx-get="{% url 'public:htmx' %}load-more/"
+                        hx-target="#content-list"
+                        hx-swap="beforeend">
+                    Load More
+                </button>
+            </div>
+        </div>
+
+        <div class="box">
+            <h3 class="title is-4">Form Submission</h3>
+            <form hx-post="{% url 'public:htmx' %}submit-form/"
+                  hx-target="#form-response"
+                  hx-swap="innerHTML">
+                {% csrf_token %}
+                <div class="field">
+                    <label class="label">Name</label>
+                    <div class="control">
+                        <input class="input" type="text" name="name" required>
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="control">
+                        <button class="button is-primary" type="submit">Submit</button>
+                    </div>
+                </div>
+            </form>
+            <div id="form-response" class="mt-4"></div>
+        </div>
+
+        <div class="box">
+            <h3 class="title is-4">Search with Auto-complete</h3>
+            <div class="field">
+                <label class="label">Search</label>
+                <div class="control">
+                    <input class="input" type="text" name="search"
+                           hx-get="{% url 'public:htmx' %}search/"
+                           hx-trigger="keyup changed delay:500ms"
+                           hx-target="#search-results">
+                </div>
+            </div>
+            <div id="search-results"></div>
+        </div>
+
+        <div class="box">
+            <h3 class="title is-4">Tabs with Dynamic Content</h3>
+            <div class="tabs">
+                <ul>
+                    <li class="is-active">
+                        <a hx-get="{% url 'public:htmx' %}tab1/"
+                           hx-target="#tab-content"
+                           hx-trigger="click">Tab 1</a>
+                    </li>
+                    <li>
+                        <a hx-get="{% url 'public:htmx' %}tab2/"
+                           hx-target="#tab-content"
+                           hx-trigger="click">Tab 2</a>
+                    </li>
+                    <li>
+                        <a hx-get="{% url 'public:htmx' %}tab3/"
+                           hx-target="#tab-content"
+                           hx-trigger="click">Tab 3</a>
+                    </li>
+                </ul>
+            </div>
+            <div id="tab-content">
+                <p>Click a tab to load its content...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        htmx.on('htmx:afterSwap', function(evt) {
+            if (evt.detail.target.id === 'tab-content') {
+                document.querySelectorAll('.tabs li').forEach(function(tab) {
+                    tab.classList.remove('is-active');
+                });
+                evt.detail.requestConfig.triggerElement.parentElement.classList.add('is-active');
+            }
+        });
+    });
+</script>
+{% endblock %} 

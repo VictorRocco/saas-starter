@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Register - ${PROJECT_NAME}{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="container">
+        <div class="columns is-centered">
+            <div class="column is-6">
+                <div class="box">
+                    <h1 class="title has-text-centered">Create an Account</h1>
+                    
+                    <form method="post" class="mt-5">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="notification is-danger">
+                            <button class="delete"></button>
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="field">
+                            <label class="label">Username</label>
+                            <div class="control has-icons-left">
+                                <input class="input" type="text" name="username" required
+                                       value="{{ form.username.value|default:'' }}">
+                                <span class="icon is-small is-left">
+                                    <i class="fas fa-user"></i>
+                                </span>
+                            </div>
+                            {% if form.username.help_text %}
+                            <p class="help">{{ form.username.help_text }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="field">
+                            <label class="label">Password</label>
+                            <div class="control has-icons-left">
+                                <input class="input" type="password" name="password1" required>
+                                <span class="icon is-small is-left">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                            </div>
+                            {% if form.password1.help_text %}
+                            <p class="help">{{ form.password1.help_text }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="field">
+                            <label class="label">Confirm Password</label>
+                            <div class="control has-icons-left">
+                                <input class="input" type="password" name="password2" required>
+                                <span class="icon is-small is-left">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                            </div>
+                            {% if form.password2.help_text %}
+                            <p class="help">{{ form.password2.help_text }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="field">
+                            <div class="control">
+                                <button class="button is-primary is-fullwidth" type="submit">
+                                    Register
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="has-text-centered mt-5">
+                            <p>Already have an account? <a href="{% url 'users:login' %}">Login</a></p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,40 @@
+from django.shortcuts import render
+from django.contrib import messages
+
+# Create your views here.
+
+def home(request):
+    """Landing page view"""
+    return render(request, 'public/home.html')
+
+def about(request):
+    """About page view"""
+    return render(request, 'public/about.html')
+
+def contact(request):
+    """Contact page view with form handling"""
+    if request.method == 'POST':
+        # Add your contact form handling logic here
+        messages.success(request, 'Thank you for your message! We will get back to you soon.')
+    return render(request, 'public/contact.html')
+
+def bulma_examples(request):
+    """Bulma CSS examples page"""
+    return render(request, 'public/examples/bulma.html')
+
+def alpine_examples(request):
+    """Alpine.js examples page"""
+    return render(request, 'public/examples/alpine.html')
+
+def htmx_examples(request):
+    """HTMX examples page and endpoints"""
+    if request.htmx:
+        # Handle HTMX requests
+        if 'load-more' in request.path:
+            return render(request, 'public/examples/partials/more_content.html')
+        elif 'submit-form' in request.path:
+            return render(request, 'public/examples/partials/form_response.html')
+    return render(request, 'public/examples/htmx.html')
+
+def index(request):
+    return render(request, 'public/index.html')

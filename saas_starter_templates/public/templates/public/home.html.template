@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+    <section class="hero is-primary is-medium">
+        <div class="hero-body">
+            <div class="container has-text-centered">
+                <h1 class="title">
+                    Welcome to Our SaaS Platform
+                </h1>
+                <h2 class="subtitle">
+                    Your solution for streamlined productivity.
+                </h2>
+                <div>
+                    <a href="#" class="button is-white is-inverted is-rounded">Get Started</a>
+                    <a href="#" class="button is-white is-rounded">Learn More</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="columns is-multiline">
+                <div class="column is-4">
+                    <div class="card">
+                        <div class="card-content">
+                            <p class="title is-4">Feature 1</p>
+                            <p class="subtitle is-6">Description of feature 1.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="column is-4">
+                    <div class="card">
+                        <div class="card-content">
+                            <p class="title is-4">Feature 2</p>
+                            <p class="subtitle is-6">Description of feature 2.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="column is-4">
+                    <div class="card">
+                        <div class="card-content">
+                            <p class="title is-4">Feature 3</p>
+                            <p class="subtitle is-6">Description of feature 3.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
