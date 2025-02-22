@@ -9,11 +9,11 @@ ENV PYTHONPATH /code
 # Set work directory
 WORKDIR /code
 
-# Install dependencies
+# Install dependencies *first* (for caching)
 COPY requirements.txt /code/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the *entire* project into the container
+# Copy the *entire* project into the container *after* dependencies
 COPY . /code/
 
 # No need for collectstatic or migrations here; they'll run on startup

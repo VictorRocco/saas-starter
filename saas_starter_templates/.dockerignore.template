@@ -1,0 +1,19 @@
+# General
+.git
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+.env
+
+# Docker
+docker-compose.yml
+Dockerfile
+
+# VS Code
+.vscode
+
+# Local development
+venv
+.venv 

@@ -9,7 +9,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile  # Explicitly specify Dockerfile (good practice)
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py shell -c \"from django.contrib.auth.models import User; User.objects.filter(username='$PG_USER').exists() or User.objects.create_superuser('$PG_USER', '$PG_EMAIL', '$PG_PASSWORD')\" &&

@@ -61,8 +61,9 @@ check_templates() {
         "core/urls.py.template"
         "templates/base.html.template"
         ".env.template"
-        "Dockerfile.template"          # Added Dockerfile
-        "docker-compose.yml.template"  # Added docker-compose.yml
+        "Dockerfile.template"
+        "docker-compose.yml.template"
+        ".dockerignore.template"
     )
 
     for template in "${required_templates[@]}"; do
@@ -157,6 +158,10 @@ EOF
 # --- Create a basic Dockerfile ---
 echo -e "${GREEN}Creating Dockerfile...${NC}"
 PG_USER="$pg_user" PG_EMAIL="$pg_email" PG_PASSWORD="$pg_password" envsubst < "$script_dir/saas_starter_templates/Dockerfile.template" > "Dockerfile"
+
+# --- Create .dockerignore ---
+echo -e "${GREEN}Creating .dockerignore...${NC}"
+cp "$script_dir/saas_starter_templates/.dockerignore.template" ".dockerignore"
 
 # Create the Django project *before* Docker build.
 echo -e "${GREEN}Creating Django project...${NC}"
