@@ -1,0 +1,65 @@
+{% load static %}
+
+<nav class="navbar" role="navigation" aria-label="main navigation" x-data="{ mobileMenu: false }">
+    <div class="navbar-brand">
+        <a class="navbar-item" href="{% url 'public:index' %}">
+            ${project_name}
+        </a>
+
+        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false"
+           @click="mobileMenu = !mobileMenu" :class="{ 'is-active': mobileMenu }">
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+        </a>
+    </div>
+
+    <div class="navbar-menu" :class="{ 'is-active': mobileMenu }">
+        <div class="navbar-start">
+            <a class="navbar-item" href="{% url 'public:about' %}" hx-boost="true">
+                About
+            </a>
+            <a class="navbar-item" href="{% url 'public:contact' %}" hx-boost="true">
+                Contact
+            </a>
+        </div>
+
+        <div class="navbar-end">
+            {% if user.is_authenticated %}
+                <div class="navbar-item has-dropdown" x-data="{ isOpen: false }">
+                    <a class="navbar-link" @click="isOpen = !isOpen">
+                        {{ user.username }}
+                    </a>
+
+                    <div class="navbar-dropdown" x-show="isOpen" @click.away="isOpen = false">
+                        <a class="navbar-item" href="{% url 'users:profile' %}">
+                            Profile
+                        </a>
+                        {% if user.is_staff %}
+                            <a class="navbar-item" href="{% url 'dashboard:index' %}">
+                                Dashboard
+                            </a>
+                        {% endif %}
+                        <hr class="navbar-divider">
+                        <a class="navbar-item" href="{% url 'users:logout' %}"
+                           hx-post="{% url 'users:logout' %}"
+                           hx-confirm="Are you sure you want to logout?">
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="navbar-item">
+                    <div class="buttons">
+                        <a class="button is-primary" href="{% url 'users:signup' %}">
+                            <strong>Sign up</strong>
+                        </a>
+                        <a class="button is-light" href="{% url 'users:login' %}">
+                            Log in
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</nav> 

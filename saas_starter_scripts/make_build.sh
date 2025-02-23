@@ -39,46 +39,73 @@ fi
 
 # --- Helper Functions ---
 
+# Function to process templates with environment variables
+process_template() {
+    local template_file="$1"
+    local output_file="$2"
+    
+    if [ ! -f "$template_file" ]; then
+        echo "Template file $template_file not found!"
+        return 1
+    }
+    
+    # Export all variables needed in templates
+    export project_name
+    export pg_user
+    export pg_password
+    export pg_email
+    export SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')
+    
+    # Process template with envsubst
+    envsubst < "$template_file" > "$output_file"
+}
+
+# Function to process all templates in a directory
+process_templates_recursive() {
+    local src_dir="$1"
+    local dest_dir="$2"
+    local base_dest_dir="$dest_dir"
+    
+    # Create destination directory if it doesn't exist
+    mkdir -p "$dest_dir"
+    
+    # Find all .template files and process them
+    find "$src_dir" -type f -name "*.template" | while read template_file; do
+        # Get the relative path from src_dir
+        local rel_path="${template_file#$src_dir/}"
+        # Remove .template extension for the destination file
+        local dest_file="$dest_dir/${rel_path%.template}"
+        # Create subdirectories if needed
+        mkdir -p "$(dirname "$dest_file")"
+        # Process the template
+        process_template "$template_file" "$dest_file"
+    done
+    
+    # Copy non-template files (like __init__.py)
+    find "$src_dir" -type f ! -name "*.template" | while read file; do
+        local rel_path="${file#$src_dir/}"
+        local dest_file="$dest_dir/$rel_path"
+        mkdir -p "$(dirname "$dest_file")"
+        cp "$file" "$dest_file"
+    done
+}
+
 # Creates a Django app with basic structure
 create_app() {
-  local app_name="$1"
-  
-  echo -e "${GREEN}Creating app '$app_name'...${RESET}" 
-  python manage.py startapp "$app_name"
-
-  # Create apps.py with proper configuration
-  cat > "$app_name/apps.py" <<EOF
-from django.apps import AppConfig
-
-class $(tr '[:lower:]' '[:upper:]' <<< ${app_name:0:1})${app_name:1}Config(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = '$app_name'
-EOF
-
-  # Create views.py with index view
-  cat > "$app_name/views.py" <<EOF
-from django.shortcuts import render
-from django.http import HttpResponse
-
-def index(request):
-    return HttpResponse("Welcome to ${app_name}")
-EOF
-
-  # Create basic urls.py with index pattern
-  cat > "$app_name/urls.py" <<EOF
-from django.urls import path
-from . import views
-
-app_name = '$app_name'
-
-urlpatterns = [
-    path('', views.index, name='index'),
-]
-EOF
-
-  # Create app-specific template directory
-  mkdir -p "templates/${app_name}"
-  touch "templates/${app_name}/__init__.py"
+    local app_name="$1"
+    
+    echo -e "${GREEN}Creating app '$app_name'...${RESET}" 
+    python manage.py startapp "$app_name"
+    
+    # Process app templates if they exist
+    if [ -d "$ROOT_DIR/saas_starter_templates/$app_name" ]; then
+        process_templates_recursive "$ROOT_DIR/saas_starter_templates/$app_name" "$app_name"
+        echo "Processed $app_name templates"
+    fi
+    
+    # Create app-specific template directory
+    mkdir -p "templates/${app_name}"
+    touch "templates/${app_name}/__init__.py"
 }
 
 # --- Main Script ---
@@ -113,18 +140,27 @@ fi
 # --- Create Project Directory and Setup ---
 echo -e "${GREEN}Creating project directory...${RESET}"
 mkdir "$project_name"
-echo "mkdir $project_name"
 cd "$project_name"
 
 # --- Create Django Project First ---
 echo -e "${GREEN}Creating Django project...${RESET}"
 django-admin startproject core .
 
+# --- Process and Copy Configuration Files ---
+echo -e "${GREEN}Processing configuration files...${RESET}"
+TEMPLATES_DIR="$ROOT_DIR/saas_starter_templates"
+
+# Process each template file
+process_template "$TEMPLATES_DIR/docker-compose.yml.template" "docker-compose.yml"
+process_template "$TEMPLATES_DIR/Dockerfile.template" "Dockerfile"
+process_template "$TEMPLATES_DIR/.env.template" ".env"
+process_template "$TEMPLATES_DIR/.dockerignore.template" ".dockerignore"
+process_template "$TEMPLATES_DIR/requirements.txt.template" "requirements.txt"
+
 # --- Copy Core Templates ---
-echo -e "${GREEN}Copying core templates...${RESET}"
-if [ -d "$ROOT_DIR/saas_starter_templates/core" ]; then
-    cp -r "$ROOT_DIR/saas_starter_templates/core/." core/
-    echo "Copied core templates"
+echo -e "${GREEN}Copying and processing core templates...${RESET}"
+if [ -d "$TEMPLATES_DIR/core" ]; then
+    process_templates_recursive "$TEMPLATES_DIR/core" "core"
 fi
 
 # --- Create Apps ---
@@ -132,234 +168,18 @@ echo -e "${GREEN}Creating apps...${RESET}"
 apps=(public dashboard users common)
 for app in "${apps[@]}"; do
   create_app "$app"
-  # Initialize __init__.py
-  touch "${app}/__init__.py"
 done
 
-# --- Copy Templates After Apps Creation ---
-echo -e "${GREEN}Copying template structure from saas_starter_templates...${RESET}"
-mkdir -p templates
-cp -r "$ROOT_DIR/saas_starter_templates/." templates/
-echo "Copied templates from $ROOT_DIR/saas_starter_templates to templates directory"
-
-# --- Create docker-compose.yml ---
-echo -e "${GREEN}Creating docker-compose.yml...${RESET}"
-cat > "docker-compose.yml" <<EOF
-version: '3.8'
-
-services:
-  web:
-    build: .
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - .:/app
-    ports:
-      - "8000:8000"
-    environment:
-      - DEBUG=True
-      - SECRET_KEY=your-secret-key
-      - DATABASE_URL=postgresql://${pg_user}:${pg_password}@db:5432/${project_name}
-    depends_on:
-      - db
-  
-  db:
-    image: postgres:15
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=${project_name}
-      - POSTGRES_USER=${pg_user}
-      - POSTGRES_PASSWORD=${pg_password}
-
-volumes:
-  postgres_data:
-EOF
-
-# --- Create a .env file ---
-echo -e "${GREEN}Creating .env file...${RESET}"
-cat > .env <<EOF
-DEBUG=True
-SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')
-DATABASE_URL=postgresql://${pg_user}:${pg_password}@db:5432/${project_name}  # Changed from localhost to db
-EMAIL_HOST_USER=${pg_email}
-EMAIL_HOST_PASSWORD=${pg_password}
-POSTGRES_HOST=db  # Added explicit host configuration
-EOF
-
-# --- Create a basic Dockerfile ---
-echo -e "${GREEN}Creating Dockerfile...${RESET}"
-cat > "Dockerfile" <<EOF
-FROM python:3.11-slim
-
-WORKDIR /app
-
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-RUN apt-get update && apt-get install -y \\
-    build-essential \\
-    libpq-dev \\
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-EOF
-
-# --- Create .dockerignore ---
-echo -e "${GREEN}Creating .dockerignore...${RESET}"
-cat > ".dockerignore" <<EOF
-.git
-.gitignore
-.env
-*.pyc
-__pycache__
-.DS_Store
-*.sqlite3
-media
-staticfiles
-.venv
-venv
-EOF
+# --- Copy Templates Structure ---
+echo -e "${GREEN}Copying template structure...${RESET}"
+if [ -d "$TEMPLATES_DIR/templates" ]; then
+    process_templates_recursive "$TEMPLATES_DIR/templates" "templates"
+fi
 
 # --- Create Project-Level Directories ---
 echo -e "${GREEN}Creating Project-Level Directories...${RESET}"
 mkdir -p static/css static/js static/img
 echo "Created static asset directories"
-
-# --- Configure core/settings.py ---
-echo -e "${GREEN}Configuring core/settings.py...${RESET}"
-cat > "core/settings.py" <<EOF
-from pathlib import Path
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-here')
-
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
-
-ALLOWED_HOSTS = ['*']  # Configure this appropriately in production
-
-INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'whitenoise.runserver_nostatic',
-    # Local apps
-    'public.apps.PublicConfig',
-    'dashboard.apps.DashboardConfig',  # Changed from admin to dashboard
-    'users.apps.UsersConfig',
-    'common.apps.CommonConfig',
-]
-
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
-
-ROOT_URLCONF = 'core.urls'
-
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
-
-WSGI_APPLICATION = 'core.wsgi.application'
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', '${project_name}'),
-        'USER': os.getenv('POSTGRES_USER', '${pg_user}'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', '${pg_password}'),
-        'HOST': os.getenv('POSTGRES_HOST', 'db'),  # Changed from 'localhost' to 'db'
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
-    }
-}
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
-
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
-USE_I18N = True
-USE_TZ = True
-
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Whitenoise configuration
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-EOF
-
-# --- Configure core/urls.py ---
-echo -e "${GREEN}Configuring core/urls.py...${RESET}"
-cat > "core/urls.py" <<EOF
-from django.contrib import admin
-from django.urls import path, include
-from django.conf import settings
-from django.conf.urls.static import static
-
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('public.urls')),
-    path('dashboard/', include('users.urls')),
-    path('admin-dashboard/', include('dashboard.urls')),  # Changed from admin to dashboard
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-EOF
-
-# --- Create a requirements.txt file ---
-echo -e "${GREEN}Creating requirements.txt...${RESET}"
-cat > requirements.txt <<EOF
-Django>=5.0.1
-psycopg2-binary>=2.9.9
-python-dotenv>=1.0.0
-whitenoise>=6.6.0
-dj-database-url>=2.1.0
-EOF
 
 # --- Create tracking file ---
 echo -e "${GREEN}Creating tracking file...${RESET}"

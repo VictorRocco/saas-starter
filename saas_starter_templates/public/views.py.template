@@ -1,0 +1,17 @@
+from django.shortcuts import render
+from django.http import HttpResponse
+from django.views.decorators.http import require_http_methods
+
+def index(request):
+    """Landing page view"""
+    return render(request, 'public/index.html')
+
+@require_http_methods(["GET"])
+def about(request):
+    """About page view"""
+    return render(request, 'public/about.html')
+
+@require_http_methods(["GET"])
+def contact(request):
+    """Contact page view"""
+    return render(request, 'public/contact.html') 
