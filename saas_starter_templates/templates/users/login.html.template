@@ -1,0 +1,45 @@
+{% extends "base/base.html" %}
+
+{% block title %}Login - ${project_name}{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="columns is-centered">
+            <div class="column is-half">
+                <h1 class="title">Login</h1>
+                
+                <form method="post" hx-post="{% url 'users:login' %}" hx-swap="outerHTML">
+                    {% csrf_token %}
+                    
+                    <div class="field">
+                        <label class="label">Username</label>
+                        <div class="control">
+                            <input class="input" type="text" name="username" required>
+                        </div>
+                    </div>
+                    
+                    <div class="field">
+                        <label class="label">Password</label>
+                        <div class="control">
+                            <input class="input" type="password" name="password" required>
+                        </div>
+                    </div>
+                    
+                    <div class="field">
+                        <div class="control">
+                            <button class="button is-primary" type="submit">
+                                Login
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <p class="mt-4">
+                    Don't have an account? <a href="{% url 'users:signup' %}">Sign up</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %} 
