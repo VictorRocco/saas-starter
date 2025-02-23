@@ -1,7 +1,12 @@
 #!/bin/bash
 
+# Get absolute paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$ROOT_DIR" || exit 1
+
 # Source common variables and functions
-source "$(dirname "$0")/make_common.sh" || {
+source "$SCRIPT_DIR/make_common.sh" || {
     printf "${RED}❌ Failed to source make_common.sh${RESET}\n"
     exit 1
 }
@@ -24,4 +29,4 @@ fi
 docker network prune -f 2>/dev/null || true
 docker volume prune -f 2>/dev/null || true
 
-printf "${GREEN}✅ Project \"${PROJECT}\" containers and volumes have been removed.${RESET}\n" 
+printf "${GREEN}✅ Project \"${PROJECT}\" containers and volumes have been removed.${RESET}\n"

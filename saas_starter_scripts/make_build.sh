@@ -1,7 +1,23 @@
 #!/bin/bash
 
-# Source common variables and functions
-source "$(dirname "$0")/make_common.sh" || {
+# Get absolute paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$ROOT_DIR" || exit 1
+
+# Check if there's already an active project
+if [ -f "$ROOT_DIR/saas_starter_tracking.json" ]; then
+    EXISTING_PROJECT=$(python3 "$SCRIPT_DIR/utils.py" read "$ROOT_DIR/saas_starter_tracking.json" "project_name")
+    if [ $? -eq 0 ]; then
+        printf "${RED}❌ Active project '${EXISTING_PROJECT}' already exists.${RESET}\n"
+        printf "${YELLOW}Please run 'make destroy' first if you want to create a new project.${RESET}\n"
+        exit 1
+    fi
+fi
+
+# Source common variables and functions with SKIP_TRACKING=1
+export SKIP_TRACKING=1
+source "$SCRIPT_DIR/make_common.sh" || {
     printf "${RED}❌ Failed to source make_common.sh${RESET}\n"
     exit 1
 }
@@ -11,7 +27,7 @@ echo "Getting project information..."
 read -p "Project name: " project_name
 
 # --- Redirect output to log file ---
-LOG_FILE="saas_starter_log.txt"
+LOG_FILE="$ROOT_DIR/saas_starter_log.txt"
 
 # --- Setup logging after getting project name ---
 if ! tee --version > /dev/null 2>&1; then
@@ -163,7 +179,7 @@ django-admin startproject core .
 
 # --- Create Apps ---
 echo -e "${GREEN}Creating apps...${RESET}"
-apps=(public admin users common)
+apps=(public dashboard users common)  # Changed 'admin' to 'dashboard'
 for app in "${apps[@]}"; do
   create_app "$app"
 done
@@ -200,7 +216,7 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
     # Local apps
     'public.apps.PublicConfig',
-    'admin.apps.AdminConfig',
+    'dashboard.apps.DashboardConfig',  # Changed from admin to dashboard
     'users.apps.UsersConfig',
     'common.apps.CommonConfig',
 ]
@@ -292,7 +308,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('public.urls')),
     path('dashboard/', include('users.urls')),
-    path('admin-dashboard/', include('admin.urls')),
+    path('admin-dashboard/', include('dashboard.urls')),  # Changed from admin to dashboard
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 EOF
 
@@ -308,7 +324,7 @@ EOF
 
 # --- Create tracking file ---
 echo -e "${GREEN}Creating tracking file...${RESET}"
-echo "{\"project_name\": \"$project_name\"}" > ../saas_starter_tracking.json
+echo "{\"project_name\": \"$project_name\"}" > "$ROOT_DIR/saas_starter_tracking.json"
 
 # --- Build and start the application using Docker Compose ---
 echo -e "${GREEN}Building and starting the application...${RESET}"

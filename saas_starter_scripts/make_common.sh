@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Get absolute paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -15,9 +19,8 @@ MIN_PIP_VERSION="22.0"
 MIN_DOCKER_VERSION="24.0"
 MIN_DOCKER_COMPOSE_VERSION="2.30"
 
-# Get absolute paths
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-TRACKING_FILE="$SCRIPT_DIR/../saas_starter_tracking.json"
+# Get project name from tracking file
+TRACKING_FILE="$ROOT_DIR/saas_starter_tracking.json"
 
 # Common functions
 function check_command() {
@@ -52,19 +55,22 @@ function get_tracking_param() {
     return 1
 }
 
-# Get active project from tracking file
-if [ -f "$TRACKING_FILE" ]; then
-    PROJECT=$(get_tracking_param "project_name")
-    if [ $? -ne 0 ]; then
-        printf "${RED}❌ Failed to read project name from tracking file${RESET}\n"
+# Skip tracking file check if SKIP_TRACKING=1
+if [ "${SKIP_TRACKING}" != "1" ]; then
+    # Get active project from tracking file
+    if [ -f "$TRACKING_FILE" ]; then
+        PROJECT=$(get_tracking_param "project_name")
+        if [ $? -ne 0 ]; then
+            printf "${RED}❌ Failed to read project name from tracking file${RESET}\n"
+            exit 1
+        fi
+        
+        if [ ! -d "$PROJECT" ]; then
+            printf "${RED}❌ Project directory ${PROJECT} not found${RESET}\n"
+            exit 1
+        fi
+    else
+        printf "${RED}❌ No tracking file found at ${TRACKING_FILE}${RESET}\n"
         exit 1
     fi
-    
-    if [ ! -d "$PROJECT" ]; then
-        printf "${RED}❌ Project directory ${PROJECT} not found${RESET}\n"
-        exit 1
-    fi
-else
-    printf "${RED}❌ No tracking file found at ${TRACKING_FILE}${RESET}\n"
-    exit 1
 fi

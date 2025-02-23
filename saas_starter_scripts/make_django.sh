@@ -1,7 +1,12 @@
 #!/bin/bash
 
+# Get absolute paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$ROOT_DIR" || exit 1
+
 # Source common variables and functions
-source "$(dirname "$0")/make_common.sh" || {
+source "$SCRIPT_DIR/make_common.sh" || {
     printf "${RED}❌ Failed to source make_common.sh${RESET}\n"
     exit 1
 }
@@ -46,4 +51,4 @@ case $COMMAND in
         ;;
 esac
 
-printf "${GREEN}✅ Command '%s' completed successfully${RESET}\n" "$COMMAND" 
+printf "${GREEN}✅ Command '%s' completed successfully${RESET}\n" "$COMMAND"
