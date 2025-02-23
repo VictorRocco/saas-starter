@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth import get_user_model
 
 @require_http_methods(["GET", "POST"])
 def login_view(request):
@@ -27,9 +28,30 @@ def logout_view(request):
 @require_http_methods(["GET", "POST"])
 def signup_view(request):
     if request.method == "POST":
-        # Add your signup logic here
-        messages.success(request, 'Account created successfully!')
-        return redirect('users:login')
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        email = request.POST.get('email')
+        
+        User = get_user_model()
+        
+        # Check if username already exists
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists.')
+            return render(request, 'users/signup.html')
+            
+        # Create new user
+        try:
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password
+            )
+            messages.success(request, 'Account created successfully!')
+            return redirect('users:login')
+        except Exception as e:
+            messages.error(request, 'Error creating account. Please try again.')
+            return render(request, 'users/signup.html')
+            
     return render(request, 'users/signup.html')
 
 @login_required
