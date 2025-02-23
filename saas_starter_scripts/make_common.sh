@@ -15,8 +15,9 @@ MIN_PIP_VERSION="22.0"
 MIN_DOCKER_VERSION="24.0"
 MIN_DOCKER_COMPOSE_VERSION="2.30"
 
-# Get project name from tracking file
-TRACKING_FILE="../saas_starter_tracking.json"
+# Get absolute paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+TRACKING_FILE="$SCRIPT_DIR/../saas_starter_tracking.json"
 
 # Common functions
 function check_command() {
@@ -42,8 +43,8 @@ function check_docker_compose() {
 function get_tracking_param() {
     local param_name=$1
     if [ -f "$TRACKING_FILE" ]; then
-        local param_value=$(jq -r ".$param_name" "$TRACKING_FILE")
-        if [ "$param_value" != "null" ]; then
+        local param_value=$(python3 "$SCRIPT_DIR/utils.py" read "$TRACKING_FILE" "$param_name")
+        if [ $? -eq 0 ]; then
             echo "$param_value"
             return 0
         fi
@@ -51,6 +52,19 @@ function get_tracking_param() {
     return 1
 }
 
-# Update the existing PROJECT assignment - store status in variable
-PROJECT=$(get_tracking_param "project_name")
-TRACKING_READ_STATUS=$?
+# Get active project from tracking file
+if [ -f "$TRACKING_FILE" ]; then
+    PROJECT=$(get_tracking_param "project_name")
+    if [ $? -ne 0 ]; then
+        printf "${RED}❌ Failed to read project name from tracking file${RESET}\n"
+        exit 1
+    fi
+    
+    if [ ! -d "$PROJECT" ]; then
+        printf "${RED}❌ Project directory ${PROJECT} not found${RESET}\n"
+        exit 1
+    fi
+else
+    printf "${RED}❌ No tracking file found at ${TRACKING_FILE}${RESET}\n"
+    exit 1
+fi

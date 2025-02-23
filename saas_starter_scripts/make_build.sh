@@ -6,9 +6,6 @@ source "$(dirname "$0")/make_common.sh" || {
     exit 1
 }
 
-# --- Debugging: Check if the script is running ---
-echo "Script started!"
-
 # --- Get Project Information ---
 echo "Getting project information..."
 read -p "Project name: " project_name
@@ -26,236 +23,23 @@ fi
 
 # --- Helper Functions ---
 
-# Creates a Django app and its basic structure.
+# Creates a Django app with basic structure
 create_app() {
   local app_name="$1"
-  local script_dir="$(dirname "$0")"  # Get the script's directory
-  local template_dir="$script_dir/saas_starter_templates/$app_name"
-  local project_template_dir="$app_name/templates/$app_name"
-
-  # Create app directory
-  echo -e "${GREEN}Creating app '$app_name'...${RESET}" # Green color
+  
+  echo -e "${GREEN}Creating app '$app_name'...${RESET}" 
   python manage.py startapp "$app_name"
 
-  # Create templates directory
-  mkdir -p "$project_template_dir"
-  echo "mkdir -p $project_template_dir"
-
-  # Copy templates
-  if [ -d "$template_dir/templates" ]; then
-    # Process all .html.template files first
-    find "$template_dir/templates/$app_name" -name "*.html.template" -print0 | while IFS= read -r -d $'\0' template_file; do
-      relative_path=$(echo "$template_file" | sed -e "s|$template_dir/templates/$app_name/||" -e "s/\.template$//")
-      target_file="$project_template_dir/$relative_path"
-      mkdir -p "$(dirname "$target_file")"
-      echo "mkdir -p $(dirname "$target_file")"
-      PROJECT_NAME="$project_name" APP_NAME="$app_name" envsubst < "$template_file" > "$target_file"
-      echo "PROJECT_NAME=$project_name APP_NAME=$app_name envsubst < $template_file > $target_file"
-      echo "Processed template: $template_file -> $target_file"
-    done
-
-    # Then copy any remaining .html files that don't have a .template version
-    find "$template_dir/templates/$app_name" -name "*.html" ! -name "*.template" -print0 | while IFS= read -r -d $'\0' template_file; do
-      relative_path=$(echo "$template_file" | sed -e "s|$template_dir/templates/$app_name/||")
-      target_file="$project_template_dir/$relative_path"
-      # Only copy if a .template version doesn't exist
-      if [ ! -f "${template_file}.template" ]; then
-        mkdir -p "$(dirname "$target_file")"
-        echo "mkdir -p $(dirname "$target_file")"
-        cp "$template_file" "$target_file"
-        echo "cp $template_file $target_file"
-        echo "Copied: $template_file -> $target_file"
-      fi
-    done
-
-    # Then process all other .template files
-    find "$template_dir/templates/$app_name" -name "*.template" ! -name "*.html.template" -print0 | while IFS= read -r -d $'\0' template_file; do
-      relative_path=$(echo "$template_file" | sed -e "s|$template_dir/templates/$app_name/||" -e "s/\.template$//")
-      target_file="$project_template_dir/$relative_path"
-      mkdir -p "$(dirname "$target_file")"
-      echo "mkdir -p $(dirname "$target_file")"
-      PROJECT_NAME="$project_name" APP_NAME="$app_name" envsubst < "$template_file" > "$target_file"
-      echo "PROJECT_NAME=$project_name APP_NAME=$app_name envsubst < $template_file > $target_file"
-      echo "Processed template: $template_file -> $target_file"
-    done
-  fi
-
-  # Copy core app files (views.py, urls.py, models.py, forms.py, apps.py)
-  for file in views.py urls.py models.py forms.py apps.py; do
-    template_file="$template_dir/${file}.template"
-    target_file="$app_name/$file"
-    
-    if [ -f "$template_file" ]; then
-      echo "Processing $template_file -> $target_file"
-      PROJECT_NAME="$project_name" APP_NAME="$app_name" envsubst < "$template_file" > "$target_file"
-      echo "PROJECT_NAME=$project_name APP_NAME=$app_name envsubst < $template_file > $target_file"
-    elif [ "$file" = "urls.py" ]; then
-      # Create a basic urls.py if template doesn't exist
-      echo "Creating basic $file for $app_name"
-      cat > "$target_file" <<EOF
+  # Create basic urls.py
+  cat > "$app_name/urls.py" <<EOF
 from django.urls import path
 from . import views
 
 app_name = '$app_name'
 
 urlpatterns = [
-    path('', views.home, name='home'),
-    path('about/', views.about, name='about'),
-    path('contact/', views.contact, name='contact'),
 ]
 EOF
-      echo "cat > $target_file <<EOF"
-    elif [ "$file" = "views.py" ]; then
-      # Create basic views if they don't exist
-      echo "Creating basic views.py for $app_name"
-      cat > "$target_file" <<EOF
-from django.shortcuts import render
-
-def home(request):
-    return render(request, '$app_name/home.html')
-
-def about(request):
-    return render(request, '$app_name/about.html')
-
-def contact(request):
-    return render(request, '$app_name/contact.html')
-EOF
-      echo "cat > $target_file <<EOF"
-    fi
-  done
-
-  # Create basic templates if they don't exist
-  if [ ! -f "$project_template_dir/home.html" ]; then
-    cat > "$project_template_dir/home.html" <<EOF
-{% extends "base.html" %}
-
-{% block title %}Home - ${project_name}{% endblock %}
-
-{% block content %}
-<section class="section">
-  <div class="container">
-    <h1 class="title">Welcome to ${project_name}</h1>
-    <p class="subtitle">This is the home page.</p>
-  </div>
-</section>
-{% endblock %}
-EOF
-    echo "cat > $project_template_dir/home.html <<EOF"
-  fi
-
-  if [ ! -f "$project_template_dir/about.html" ]; then
-    cat > "$project_template_dir/about.html" <<EOF
-{% extends "base.html" %}
-
-{% block title %}About - ${project_name}{% endblock %}
-
-{% block content %}
-<section class="section">
-  <div class="container">
-    <h1 class="title">About Us</h1>
-    <p class="subtitle">Learn more about ${project_name}.</p>
-  </div>
-</section>
-{% endblock %}
-EOF
-    echo "cat > $project_template_dir/about.html <<EOF"
-  fi
-
-  if [ ! -f "$project_template_dir/contact.html" ]; then
-    cat > "$project_template_dir/contact.html" <<EOF
-{% extends "base.html" %}
-
-{% block title %}Contact - ${project_name}{% endblock %}
-
-{% block content %}
-<section class="section">
-  <div class="container">
-    <h1 class="title">Contact Us</h1>
-    <p class="subtitle">Get in touch with ${project_name}.</p>
-  </div>
-</section>
-{% endblock %}
-EOF
-    echo "cat > $project_template_dir/contact.html <<EOF"
-  fi
-
-  # Special handling for public app
-  if [[ "$app_name" == "public" ]]; then
-    # Create examples directory
-    mkdir -p "$project_template_dir/examples"
-    echo "mkdir -p $project_template_dir/examples"
-
-    # Create example templates
-    cat > "$project_template_dir/examples/bulma.html" <<EOF
-{% extends "base.html" %}
-
-{% block title %}Bulma Examples - ${project_name}{% endblock %}
-
-{% block content %}
-<section class="section">
-  <div class="container">
-    <h1 class="title">Bulma Examples</h1>
-    <p class="subtitle">Examples of Bulma CSS components.</p>
-  </div>
-</section>
-{% endblock %}
-EOF
-    echo "cat > $project_template_dir/examples/bulma.html <<EOF"
-
-    cat > "$project_template_dir/examples/alpine.html" <<EOF
-{% extends "base.html" %}
-
-{% block title %}Alpine.js Examples - ${project_name}{% endblock %}
-
-{% block content %}
-<section class="section">
-  <div class="container">
-    <h1 class="title">Alpine.js Examples</h1>
-    <p class="subtitle">Examples of Alpine.js functionality.</p>
-  </div>
-</section>
-{% endblock %}
-EOF
-    echo "cat > $project_template_dir/examples/alpine.html <<EOF"
-
-    cat > "$project_template_dir/examples/htmx.html" <<EOF
-{% extends "base.html" %}
-
-{% block title %}HTMX Examples - ${project_name}{% endblock %}
-
-{% block content %}
-<section class="section">
-  <div class="container">
-    <h1 class="title">HTMX Examples</h1>
-    <p class="subtitle">Examples of HTMX functionality.</p>
-  </div>
-</section>
-{% endblock %}
-EOF
-    echo "cat > $project_template_dir/examples/htmx.html <<EOF"
-  fi
-}
-
-# Checks for required template files.
-check_templates() {
-    local script_dir="$1"
-    local required_templates=(
-        "core/settings.py.template"
-        "core/urls.py.template"
-        "templates/base.html.template"
-        ".env.template"
-        "Dockerfile.template"
-        "docker-compose.yml.template"
-        ".dockerignore.template"
-    )
-
-    for template in "${required_templates[@]}"; do
-        if [ ! -f "$script_dir/saas_starter_templates/$template" ]; then
-            echo -e "${YELLOW}Error: Template file not found: $template${RESET}"
-            echo "Please ensure all template files are present in $script_dir/saas_starter_templates/"
-            exit 1
-        fi
-    done
 }
 
 # --- Main Script ---
@@ -293,34 +77,85 @@ mkdir "$project_name"
 echo "mkdir $project_name"
 cd "$project_name"
 
-# --- Check if all templates exist before any operations ---
-check_templates "$script_dir"
-
 # --- Create docker-compose.yml ---
 echo -e "${GREEN}Creating docker-compose.yml...${RESET}"
-PROJECT_NAME="$project_name" PG_USER="$pg_user" PG_PASSWORD="$pg_password" envsubst < "$script_dir/saas_starter_templates/docker-compose.yml.template" > "docker-compose.yml"
-echo "PROJECT_NAME=$project_name PG_USER=$pg_user PG_PASSWORD=$pg_password envsubst < $script_dir/saas_starter_templates/docker-compose.yml.template > docker-compose.yml"
+cat > "docker-compose.yml" <<EOF
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=your-secret-key
+      - DATABASE_URL=postgresql://${pg_user}:${pg_password}@db:5432/${project_name}
+    depends_on:
+      - db
+  
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${project_name}
+      - POSTGRES_USER=${pg_user}
+      - POSTGRES_PASSWORD=${pg_password}
+
+volumes:
+  postgres_data:
+EOF
 
 # --- Create a .env file ---
 echo -e "${GREEN}Creating .env file...${RESET}"
-cat <<EOF > .env
+cat > .env <<EOF
 DEBUG=True
 SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')
 DATABASE_URL=postgresql://${pg_user}:${pg_password}@localhost:5432/${project_name}
 EMAIL_HOST_USER=${pg_email}
 EMAIL_HOST_PASSWORD=${pg_password}
 EOF
-echo "cat <<EOF > .env"
 
 # --- Create a basic Dockerfile ---
 echo -e "${GREEN}Creating Dockerfile...${RESET}"
-PG_USER="$pg_user" PG_EMAIL="$pg_email" PG_PASSWORD="$pg_password" envsubst < "$script_dir/saas_starter_templates/Dockerfile.template" > "Dockerfile"
-echo "PG_USER=$pg_user PG_EMAIL=$pg_email PG_PASSWORD=$pg_password  envsubst < $script_dir/saas_starter_templates/Dockerfile.template > Dockerfile"
+cat > "Dockerfile" <<EOF
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+RUN apt-get update && apt-get install -y \\
+    build-essential \\
+    libpq-dev \\
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+EOF
 
 # --- Create .dockerignore ---
 echo -e "${GREEN}Creating .dockerignore...${RESET}"
-cp "$script_dir/saas_starter_templates/.dockerignore.template" ".dockerignore"
-echo "cp $script_dir/saas_starter_templates/.dockerignore.template .dockerignore"
+cat > ".dockerignore" <<EOF
+.git
+.gitignore
+.env
+*.pyc
+__pycache__
+.DS_Store
+*.sqlite3
+media
+staticfiles
+.venv
+venv
+EOF
 
 # --- Create Django Project ---
 echo -e "${GREEN}Creating Django project...${RESET}"
@@ -328,81 +163,157 @@ django-admin startproject core .
 
 # --- Create Apps ---
 echo -e "${GREEN}Creating apps...${RESET}"
-apps=(public users)  # Add or remove apps as needed
+apps=(public admin users common)
 for app in "${apps[@]}"; do
   create_app "$app"
 done
 
 # --- Create Project-Level Directories ---
 echo -e "${GREEN}Creating Project-Level Directories...${RESET}"
-mkdir templates
-echo "mkdir templates"
-mkdir static
-echo "mkdir static"
-mkdir templates/components
-echo "mkdir templates/components"
+mkdir -p static/css static/js static/img
+echo "Created static asset directories"
 
 # --- Configure core/settings.py ---
 echo -e "${GREEN}Configuring core/settings.py...${RESET}"
-if [ -f "$script_dir/saas_starter_templates/core/settings.py.template" ]; then
-    # Create a string with all app names for INSTALLED_APPS
-    APPS_LIST=""
-    for app in "${apps[@]}"; do
-        APPS_LIST+="    '$app',\n"
-    done
-    # Remove the trailing newline and escape the newlines
-    APPS_LIST=$(echo -e "${APPS_LIST%\\n}" | sed 's/\\n/\\\\n/g')
-    export APPS_LIST
-    export DJANGO_SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')
-    export DEBUG=True
-    PROJECT_NAME="$project_name" envsubst < "$script_dir/saas_starter_templates/core/settings.py.template" > "core/settings.py"
-    echo "PROJECT_NAME=$project_name envsubst < $script_dir/saas_starter_templates/core/settings.py.template > core/settings.py"
-else
-    echo -e "${YELLOW}Error: settings.py template not found at $script_dir/saas_starter_templates/core/settings.py.template${RESET}"
-    exit 1
-fi
+cat > "core/settings.py" <<EOF
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-here')
+
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
+
+ALLOWED_HOSTS = ['*']  # Configure this appropriately in production
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'whitenoise.runserver_nostatic',
+    # Local apps
+    'public.apps.PublicConfig',
+    'admin.apps.AdminConfig',
+    'users.apps.UsersConfig',
+    'common.apps.CommonConfig',
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+ROOT_URLCONF = 'core.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'core.wsgi.application'
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', '${project_name}'),
+        'USER': os.getenv('POSTGRES_USER', '${pg_user}'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', '${pg_password}'),
+        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+    }
+}
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Whitenoise configuration
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+EOF
 
 # --- Configure core/urls.py ---
 echo -e "${GREEN}Configuring core/urls.py...${RESET}"
-if [ -f "$script_dir/saas_starter_templates/core/urls.py.template" ]; then
-    PROJECT_NAME="$project_name" envsubst < "$script_dir/saas_starter_templates/core/urls.py.template" > "core/urls.py"
-    echo "PROJECT_NAME=$project_name envsubst < $script_dir/saas_starter_templates/core/urls.py.template > core/urls.py"
-else
-    echo -e "${YELLOW}Error: urls.py template not found at $script_dir/saas_starter_templates/core/urls.py.template${RESET}"
-    exit 1
-fi
+cat > "core/urls.py" <<EOF
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
-# --- Create base Templates ---
-echo -e "${GREEN}Creating base Templates...${RESET}"
-template_path="$script_dir/saas_starter_templates/templates/base.html.template"
-if [ -f "$template_path" ]; then
-    cp "$template_path" "templates/base.html"
-    echo "cp $template_path templates/base.html"
-else
-    echo -e "${YELLOW}Error: base.html template not found at $template_path${RESET}"
-    exit 1
-fi
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('public.urls')),
+    path('dashboard/', include('users.urls')),
+    path('admin-dashboard/', include('admin.urls')),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+EOF
 
-# --- Create a requirements.txt file. ---
+# --- Create a requirements.txt file ---
 echo -e "${GREEN}Creating requirements.txt...${RESET}"
-cat <<EOF > requirements.txt
+cat > requirements.txt <<EOF
 Django>=5.0.1
 psycopg2-binary>=2.9.9
 python-dotenv>=1.0.0
 whitenoise>=6.6.0
 dj-database-url>=2.1.0
 EOF
-echo "cat <<EOF > requirements.txt"
 
 # --- Create tracking file ---
 echo -e "${GREEN}Creating tracking file...${RESET}"
 echo "{\"project_name\": \"$project_name\"}" > ../saas_starter_tracking.json
-echo "echo {\"project_name\": \"$project_name\"} > ../saas_starter_tracking.json"
 
 # --- Build and start the application using Docker Compose ---
 echo -e "${GREEN}Building and starting the application...${RESET}"
-$DOCKER_COMPOSE build
-$DOCKER_COMPOSE up -d
+${DOCKER_COMPOSE_COMMAND} build
+${DOCKER_COMPOSE_COMMAND} up -d
 
 echo -e "${GREEN}Project '$project_name' created and started successfully.${RESET}"
 echo "The application is running in Docker containers."
