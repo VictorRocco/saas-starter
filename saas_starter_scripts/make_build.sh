@@ -1,26 +1,28 @@
 #!/bin/bash
 
+# Source common variables and functions
+source "$(dirname "$0")/make_common.sh" || {
+    printf "${RED}❌ Failed to source make_common.sh${RESET}\n"
+    exit 1
+}
+
 # --- Debugging: Check if the script is running ---
 echo "Script started!"
+
+# --- Get Project Information ---
+echo "Getting project information..."
+read -p "Project name: " project_name
 
 # --- Redirect output to log file ---
 LOG_FILE="saas_starter_log.txt"
 
-# --- Debugging: Check if tee is working and permissions are correct ---
+# --- Setup logging after getting project name ---
 if ! tee --version > /dev/null 2>&1; then
   echo "tee command not found! Logging will not work."
 else
-  echo "tee command found."
-  # --- Try simple redirection first, stripping colors ---
   exec &> >(sed 's/\x1B\[[0-9;]*[mG]//g' | tee "$LOG_FILE")
   echo "Starting the saas_starter_builder.sh script. Logging to $LOG_FILE"
 fi
-
-# --- Colors (for nicer output) ---
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-RED='\033[0;31m'
-RESET='\033[0m' # No Color
 
 # --- Helper Functions ---
 
@@ -32,7 +34,7 @@ create_app() {
   local project_template_dir="$app_name/templates/$app_name"
 
   # Create app directory
-  echo -e "\e[32mCreating app '$app_name'...\e[0m" # Green color
+  echo -e "${GREEN}Creating app '$app_name'...${RESET}" # Green color
   python manage.py startapp "$app_name"
 
   # Create templates directory
@@ -260,26 +262,13 @@ check_templates() {
 
 # Check for required tools
 echo "Checking for required tools..."
-if ! command -v docker &> /dev/null; then
-    echo "Docker is not installed. Please install Docker and try again."
-    exit 1
-fi
-
-# Determine Docker Compose command (v1 or v2)
-if command -v docker-compose &> /dev/null; then
-    DOCKER_COMPOSE="docker-compose"
-    echo "Found Docker Compose command: docker-compose (v1)"
-elif docker compose version &> /dev/null; then
-    DOCKER_COMPOSE="docker compose"
-    echo "Found Docker Compose command: docker compose (v2)"
-else
-    echo "Docker Compose is not installed. Please install Docker Compose and try again."
+if ! check_command "docker"; then
     exit 1
 fi
 
 # Check for django-admin
-if ! command -v django-admin &> /dev/null; then
-    echo -e "${YELLOW}Error: django-admin is not installed. Please install Django and try again.${RESET}"
+if ! check_command "django-admin"; then
+    printf "${YELLOW}Error: django-admin is not installed. Please install Django and try again.${RESET}\n"
     exit 1
 fi
 
@@ -292,13 +281,9 @@ use_postgres=true
 # Store absolute script directory path before changing directories
 script_dir="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
-# --- Get Project Information ---
-echo "Getting project information..."
-read -p "Project name: " project_name
-
 # --- Check if project directory already exists ---
 if [ -d "$project_name" ]; then
-    echo -e "${RED}Error: Project directory '$project_name' already exists.${RESET} Please run '${YELLOW}rm -rf $project_name${RESET}' to delete the existing project first.  \e[1mUse this command with extreme caution! Make sure you have a backup if needed.\e[0m"
+    printf "${RED}Error: Project directory '$project_name' already exists.${RESET} Please run '${YELLOW}rm -rf $project_name${RESET}' to delete the existing project first.  \e[1mUse this command with extreme caution! Make sure you have a backup if needed.\e[0m\n"
     exit 1
 fi
 

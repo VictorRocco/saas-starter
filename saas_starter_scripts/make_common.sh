@@ -51,8 +51,6 @@ function get_tracking_param() {
     return 1
 }
 
-# Update the existing PROJECT assignment to use the new function
+# Update the existing PROJECT assignment - store status in variable
 PROJECT=$(get_tracking_param "project_name")
-if [ $? -ne 0 ]; then
-    printf "${YELLOW}⚠️ Warning: Could not read project name from tracking file${RESET}\n"
-fi
+TRACKING_READ_STATUS=$?

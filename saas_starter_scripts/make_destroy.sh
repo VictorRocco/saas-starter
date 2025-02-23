@@ -3,13 +3,13 @@
 # Source common variables and functions
 source "$(dirname "$0")/make_common.sh" || {
     printf "${RED}❌ Failed to source make_common.sh${RESET}\n"
-    exit 1
+    exit 0
 }
 
 # Check if we have a valid project
 if [ -z "$PROJECT" ]; then
     printf "${RED}❌ No tracked active project found. Exiting.${RESET}\n"
-    exit 1
+    exit 0
 fi
 
 # Clean up containers and volumes if they exist
