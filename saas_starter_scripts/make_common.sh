@@ -17,11 +17,6 @@ MIN_DOCKER_COMPOSE_VERSION="2.30"
 
 # Get project name from tracking file
 TRACKING_FILE="../saas_starter_tracking.json"
-if [ -f "$TRACKING_FILE" ]; then
-    PROJECT=$(jq -r .project_name "$TRACKING_FILE")
-else
-    PROJECT="test"
-fi
 
 # Common functions
 function check_command() {
@@ -42,4 +37,22 @@ function check_docker_compose() {
         return 1
     fi
     return 0
-} 
+}
+
+function get_tracking_param() {
+    local param_name=$1
+    if [ -f "$TRACKING_FILE" ]; then
+        local param_value=$(jq -r ".$param_name" "$TRACKING_FILE")
+        if [ "$param_value" != "null" ]; then
+            echo "$param_value"
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Update the existing PROJECT assignment to use the new function
+PROJECT=$(get_tracking_param "project_name")
+if [ $? -ne 0 ]; then
+    printf "${YELLOW}⚠️ Warning: Could not read project name from tracking file${RESET}\n"
+fi

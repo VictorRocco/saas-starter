@@ -6,14 +6,15 @@ source "$(dirname "$0")/make_common.sh" || {
     exit 1
 }
 
-# Clean up first
-"$(dirname "$0")/make_clean.sh"
-
-# Check if tracking file exists
-TRACKING_FILE="../saas_starter_tracking.json"
-if [ ! -f "$TRACKING_FILE" ]; then
+# Check if we have a valid project
+if [ -z "$PROJECT" ]; then
     printf "${RED}❌ No tracked active project found. Exiting.${RESET}\n"
-    exit 0
+    exit 1
+fi
+
+# Clean up containers and volumes if they exist
+if [ -f "${PROJECT}/docker-compose.yml" ]; then
+    cd "${PROJECT}" && $DOCKER_COMPOSE_COMMAND down -v --remove-orphans &> /dev/null
 fi
 
 echo ""
@@ -37,4 +38,4 @@ fi
 
 # Remove tracking file
 rm -f "$TRACKING_FILE"
-printf "${GREEN}✅ Tracking file has been removed.${RESET}\n" 
+printf "${GREEN}✅ Tracking file has been removed.${RESET}\n"
