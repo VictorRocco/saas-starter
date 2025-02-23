@@ -9,7 +9,7 @@ services:
     environment:
       - DEBUG=True
       - SECRET_KEY=${SECRET_KEY}
-      - DATABASE_URL=postgresql://${pg_user}:${pg_password}@db:5432/${project_name}
+      - DATABASE_URL=postgresql://${pg_user}:${pg_password}@db:5432/${pg_user}
     depends_on:
       - db
   
@@ -18,7 +18,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=${project_name}
+      - POSTGRES_DB=${pg_user}
       - POSTGRES_USER=${pg_user}
       - POSTGRES_PASSWORD=${pg_password}
 

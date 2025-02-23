@@ -15,14 +15,9 @@ source "$SCRIPT_DIR/make_common.sh" || {
 }
 
 # Get project name from tracking file
-if [ ! -f "$TRACKING_FILE" ]; then
-    printf "${RED}❌ No tracking file found. Exiting.${RESET}\n"
-    exit 1
-fi
-
 PROJECT_NAME=$(python3 "$SCRIPT_DIR/utils.py" read "$TRACKING_FILE" "project_name")
 if [ $? -ne 0 ]; then
-    printf "${RED}❌ Invalid tracking file content. Exiting.${RESET}\n"
+    printf "${RED}❌ No tracked active project found. Exiting.${RESET}\n"
     exit 1
 fi
 

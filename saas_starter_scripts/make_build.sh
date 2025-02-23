@@ -5,6 +5,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$ROOT_DIR" || exit 1
 
+# Source common variables and functions with SKIP_TRACKING=1
+export SKIP_TRACKING=1
+source "$SCRIPT_DIR/make_common.sh" || {
+    echo "❌ Failed to source make_common.sh"
+    exit 1
+}
+
 # Check if there's already an active project
 if [ -f "$ROOT_DIR/saas_starter_tracking.json" ]; then
     EXISTING_PROJECT=$(python3 "$SCRIPT_DIR/utils.py" read "$ROOT_DIR/saas_starter_tracking.json" "project_name")
@@ -14,13 +21,6 @@ if [ -f "$ROOT_DIR/saas_starter_tracking.json" ]; then
         exit 1
     fi
 fi
-
-# Source common variables and functions with SKIP_TRACKING=1
-export SKIP_TRACKING=1
-source "$SCRIPT_DIR/make_common.sh" || {
-    printf "${RED}❌ Failed to source make_common.sh${RESET}\n"
-    exit 1
-}
 
 # --- Get Project Information ---
 echo "Getting project information..."
@@ -221,24 +221,20 @@ if ! wait_for_postgres; then
     exit 1
 fi
 
-# Apply migrations and create superuser after database is ready
-echo -e "${GREEN}Applying migrations and creating superuser...${RESET}"
-
 # Install dependencies first
 ${DOCKER_COMPOSE_COMMAND} exec web pip install -r requirements.txt
 
 # Run migrations for Django's built-in apps first
-${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate auth
-${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate admin
-${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate contenttypes
-${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate sessions
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate --noinput
 
-# Run makemigrations and migrate for our apps
+# Run makemigrations for our apps
 ${DOCKER_COMPOSE_COMMAND} exec web python manage.py makemigrations users
 ${DOCKER_COMPOSE_COMMAND} exec web python manage.py makemigrations public
 ${DOCKER_COMPOSE_COMMAND} exec web python manage.py makemigrations dashboard
 ${DOCKER_COMPOSE_COMMAND} exec web python manage.py makemigrations common
-${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate
+
+# Apply all migrations
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate --noinput
 
 # Create superuser
 ${DOCKER_COMPOSE_COMMAND} exec web python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('${pg_user}', '${pg_email}', '${pg_password}') if not User.objects.filter(username='${pg_user}').exists() else None"
