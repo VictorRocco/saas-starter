@@ -31,10 +31,10 @@ LOG_FILE="$ROOT_DIR/saas_starter_log.txt"
 
 # --- Setup logging after getting project name ---
 if ! tee --version > /dev/null 2>&1; then
-  echo "tee command not found! Logging will not work."
+    echo "tee command not found! Logging will not work."
 else
-  exec &> >(sed 's/\x1B\[[0-9;]*[mG]//g' | tee "$LOG_FILE")
-  echo "Starting the saas_starter_builder.sh script. Logging to $LOG_FILE"
+    exec &> >(sed 's/\x1B\[[0-9;]*[mG]//g' | tee "$LOG_FILE")
+    echo "Starting the saas_starter_builder.sh script. Logging to $LOG_FILE"
 fi
 
 # --- Helper Functions ---
@@ -47,7 +47,7 @@ process_template() {
     if [ ! -f "$template_file" ]; then
         echo "Template file $template_file not found!"
         return 1
-    }
+    fi
     
     # Export all variables needed in templates
     export project_name
@@ -64,13 +64,12 @@ process_template() {
 process_templates_recursive() {
     local src_dir="$1"
     local dest_dir="$2"
-    local base_dest_dir="$dest_dir"
     
     # Create destination directory if it doesn't exist
     mkdir -p "$dest_dir"
     
     # Find all .template files and process them
-    find "$src_dir" -type f -name "*.template" | while read template_file; do
+    find "$src_dir" -type f -name "*.template" | while read -r template_file; do
         # Get the relative path from src_dir
         local rel_path="${template_file#$src_dir/}"
         # Remove .template extension for the destination file
@@ -82,7 +81,7 @@ process_templates_recursive() {
     done
     
     # Copy non-template files (like __init__.py)
-    find "$src_dir" -type f ! -name "*.template" | while read file; do
+    find "$src_dir" -type f ! -name "*.template" | while read -r file; do
         local rel_path="${file#$src_dir/}"
         local dest_file="$dest_dir/$rel_path"
         mkdir -p "$(dirname "$dest_file")"
@@ -90,12 +89,32 @@ process_templates_recursive() {
     done
 }
 
+# Function to wait for PostgreSQL to be ready
+wait_for_postgres() {
+    echo "Waiting for PostgreSQL to be ready..."
+    local max_attempts=30
+    local attempt=1
+    
+    while [ $attempt -le $max_attempts ]; do
+        if ${DOCKER_COMPOSE_COMMAND} exec db pg_isready -U ${pg_user} > /dev/null 2>&1; then
+            echo "PostgreSQL is ready!"
+            return 0
+        fi
+        echo "Attempt $attempt of $max_attempts: PostgreSQL is not ready yet..."
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+    
+    echo "Error: PostgreSQL did not become ready in time"
+    return 1
+}
+
 # Creates a Django app with basic structure
 create_app() {
     local app_name="$1"
     
     echo -e "${GREEN}Creating app '$app_name'...${RESET}" 
-    python manage.py startapp "$app_name"
+    django-admin startapp "$app_name"
     
     # Process app templates if they exist
     if [ -d "$ROOT_DIR/saas_starter_templates/$app_name" ]; then
@@ -157,18 +176,24 @@ process_template "$TEMPLATES_DIR/.env.template" ".env"
 process_template "$TEMPLATES_DIR/.dockerignore.template" ".dockerignore"
 process_template "$TEMPLATES_DIR/requirements.txt.template" "requirements.txt"
 
+# --- Create Apps First ---
+echo -e "${GREEN}Creating apps...${RESET}"
+apps=(public dashboard users common)
+for app in "${apps[@]}"; do
+    django-admin startapp "$app"
+    if [ -d "$ROOT_DIR/saas_starter_templates/$app" ]; then
+        process_templates_recursive "$ROOT_DIR/saas_starter_templates/$app" "$app"
+        echo "Processed $app templates"
+    fi
+    mkdir -p "templates/${app}"
+    touch "templates/${app}/__init__.py"
+done
+
 # --- Copy Core Templates ---
 echo -e "${GREEN}Copying and processing core templates...${RESET}"
 if [ -d "$TEMPLATES_DIR/core" ]; then
     process_templates_recursive "$TEMPLATES_DIR/core" "core"
 fi
-
-# --- Create Apps ---
-echo -e "${GREEN}Creating apps...${RESET}"
-apps=(public dashboard users common)
-for app in "${apps[@]}"; do
-  create_app "$app"
-done
 
 # --- Copy Templates Structure ---
 echo -e "${GREEN}Copying template structure...${RESET}"
@@ -190,11 +215,23 @@ echo -e "${GREEN}Building and starting the application...${RESET}"
 ${DOCKER_COMPOSE_COMMAND} build
 ${DOCKER_COMPOSE_COMMAND} up -d
 
-# Apply migrations and create superuser after starting containers
+# Wait for PostgreSQL to be ready
+if ! wait_for_postgres; then
+    echo "Error: Database failed to start. Check the logs with 'make logs'"
+    exit 1
+fi
+
+# Apply migrations and create superuser after database is ready
 echo -e "${GREEN}Applying migrations and creating superuser...${RESET}"
-${DOCKER_COMPOSE_COMMAND} up -d
-sleep 10  # Wait for database to be ready
+
+# Install dependencies first
+${DOCKER_COMPOSE_COMMAND} exec web pip install -r requirements.txt
+
+# Run migrations
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py makemigrations
 ${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate
+
+# Create superuser
 ${DOCKER_COMPOSE_COMMAND} exec web python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('${pg_user}', '${pg_email}', '${pg_password}') if not User.objects.filter(username='${pg_user}').exists() else None"
 
 echo -e "${GREEN}Project '$project_name' created and started successfully.${RESET}"
