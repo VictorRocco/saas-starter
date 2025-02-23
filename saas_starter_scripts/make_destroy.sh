@@ -1,9 +1,12 @@
 #!/bin/bash
 
-# Get the absolute path to the scripts directory
+# Get absolute paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$ROOT_DIR" || exit 1
+
+# Skip tracking check from common.sh since we'll handle it ourselves
+export SKIP_TRACKING=1
 
 # Source common variables and functions
 source "$SCRIPT_DIR/make_common.sh" || {
@@ -11,15 +14,17 @@ source "$SCRIPT_DIR/make_common.sh" || {
     exit 1
 }
 
-# Get project name directly using utils.py after common.sh is sourced
-PROJECT_NAME=$(python3 "$SCRIPT_DIR/utils.py" read "$TRACKING_FILE" "project_name")
-if [ $? -ne 0 ]; then
-    printf "${RED}❌ No tracked active project found. Exiting.${RESET}\n"
+# Get project name from tracking file
+if [ ! -f "$TRACKING_FILE" ]; then
+    printf "${RED}❌ No tracking file found. Exiting.${RESET}\n"
     exit 1
 fi
 
-# Return to original directory
-cd - &> /dev/null
+PROJECT_NAME=$(python3 "$SCRIPT_DIR/utils.py" read "$TRACKING_FILE" "project_name")
+if [ $? -ne 0 ]; then
+    printf "${RED}❌ Invalid tracking file content. Exiting.${RESET}\n"
+    exit 1
+fi
 
 # Clean up containers and volumes if they exist
 if [ -f "${PROJECT_NAME}/docker-compose.yml" ]; then

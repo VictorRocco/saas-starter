@@ -131,9 +131,10 @@ echo -e "${GREEN}Creating .env file...${RESET}"
 cat > .env <<EOF
 DEBUG=True
 SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')
-DATABASE_URL=postgresql://${pg_user}:${pg_password}@localhost:5432/${project_name}
+DATABASE_URL=postgresql://${pg_user}:${pg_password}@db:5432/${project_name}  # Changed from localhost to db
 EMAIL_HOST_USER=${pg_email}
 EMAIL_HOST_PASSWORD=${pg_password}
+POSTGRES_HOST=db  # Added explicit host configuration
 EOF
 
 # --- Create a basic Dockerfile ---
@@ -258,7 +259,7 @@ DATABASES = {
         'NAME': os.getenv('POSTGRES_DB', '${project_name}'),
         'USER': os.getenv('POSTGRES_USER', '${pg_user}'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', '${pg_password}'),
-        'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+        'HOST': os.getenv('POSTGRES_HOST', 'db'),  # Changed from 'localhost' to 'db'
         'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
@@ -325,11 +326,69 @@ EOF
 # --- Create tracking file ---
 echo -e "${GREEN}Creating tracking file...${RESET}"
 echo "{\"project_name\": \"$project_name\"}" > "$ROOT_DIR/saas_starter_tracking.json"
+file in the 
+# --- Create templates directory structure ---
+echo -e "${GREEN}Creating template structure...${RESET}"
+mkdir -p templates/public
+mkdir -p templates/dashboard
+mkdir -p templates/users
+
+# Create base template
+cat > templates/base.html <<EOF
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}{% endblock %}</title>
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>
+EOF
+
+# Create homepage template
+cat > templates/public/home.html <<EOF
+{% extends "base.html" %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+    <h1>Welcome to ${project_name}</h1>
+    <p>Your application is running successfully!</p>
+{% endblock %}
+EOF
+
+# Configure public/views.py
+cat > public/views.py <<EOF
+from django.views.generic import TemplateView
+
+class HomeView(TemplateView):
+    template_name = 'public/home.html'
+EOF
+
+# Configure public/urls.py
+cat > public/urls.py <<EOF
+from django.urls import path
+from . import views
+
+app_name = 'public'
+
+urlpatterns = [
+    path('', views.HomeView.as_view(), name='home'),
+]
+EOF
 
 # --- Build and start the application using Docker Compose ---
 echo -e "${GREEN}Building and starting the application...${RESET}"
 ${DOCKER_COMPOSE_COMMAND} build
 ${DOCKER_COMPOSE_COMMAND} up -d
+
+# Apply migrations and create superuser after starting containers
+echo -e "${GREEN}Applying migrations and creating superuser...${RESET}"
+${DOCKER_COMPOSE_COMMAND} up -d
+sleep 10  # Wait for database to be ready
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('${pg_user}', '${pg_email}', '${pg_password}') if not User.objects.filter(username='${pg_user}').exists() else None"
 
 echo -e "${GREEN}Project '$project_name' created and started successfully.${RESET}"
 echo "The application is running in Docker containers."
