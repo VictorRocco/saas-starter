@@ -227,8 +227,17 @@ echo -e "${GREEN}Applying migrations and creating superuser...${RESET}"
 # Install dependencies first
 ${DOCKER_COMPOSE_COMMAND} exec web pip install -r requirements.txt
 
-# Run migrations
-${DOCKER_COMPOSE_COMMAND} exec web python manage.py makemigrations
+# Run migrations for Django's built-in apps first
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate auth
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate admin
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate contenttypes
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate sessions
+
+# Run makemigrations and migrate for our apps
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py makemigrations users
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py makemigrations public
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py makemigrations dashboard
+${DOCKER_COMPOSE_COMMAND} exec web python manage.py makemigrations common
 ${DOCKER_COMPOSE_COMMAND} exec web python manage.py migrate
 
 # Create superuser
