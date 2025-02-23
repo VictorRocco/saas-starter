@@ -67,7 +67,58 @@
                     </div>
                 </div>
             </div>
+
+            <div class="column is-one-third">
+                <div class="card">
+                    <div class="card-content">
+                        <p class="title is-4">Bulma CSS</p>
+                        <p class="subtitle is-6">Modern CSS Framework</p>
+                        <div class="content">
+                            Styled with Bulma for:
+                            <ul>
+                                <li>Responsive design</li>
+                                <li>Modern components</li>
+                                <li>Flexbox-based grid</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-one-third">
+                <div class="card">
+                    <div class="card-content">
+                        <p class="title is-4">Docker</p>
+                        <p class="subtitle is-6">Container Platform</p>
+                        <div class="content">
+                            Containerized with Docker for:
+                            <ul>
+                                <li>Consistent environments</li>
+                                <li>Easy deployment</li>
+                                <li>Scalable infrastructure</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-one-third">
+                <div class="card">
+                    <div class="card-content">
+                        <p class="title is-4">PostgreSQL</p>
+                        <p class="subtitle is-6">Advanced Open Source Database</p>
+                        <div class="content">
+                            Powered by PostgreSQL for:
+                            <ul>
+                                <li>Robust data storage</li>
+                                <li>ACID compliance</li>
+                                <li>Advanced queries</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
-{% endblock %} 
+{% endblock %}
