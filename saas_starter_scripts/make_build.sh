@@ -46,7 +46,25 @@ create_app() {
   echo -e "${GREEN}Creating app '$app_name'...${RESET}" 
   python manage.py startapp "$app_name"
 
-  # Create basic urls.py
+  # Create apps.py with proper configuration
+  cat > "$app_name/apps.py" <<EOF
+from django.apps import AppConfig
+
+class $(tr '[:lower:]' '[:upper:]' <<< ${app_name:0:1})${app_name:1}Config(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = '$app_name'
+EOF
+
+  # Create views.py with index view
+  cat > "$app_name/views.py" <<EOF
+from django.shortcuts import render
+from django.http import HttpResponse
+
+def index(request):
+    return HttpResponse("Welcome to ${app_name}")
+EOF
+
+  # Create basic urls.py with index pattern
   cat > "$app_name/urls.py" <<EOF
 from django.urls import path
 from . import views
@@ -54,8 +72,13 @@ from . import views
 app_name = '$app_name'
 
 urlpatterns = [
+    path('', views.index, name='index'),
 ]
 EOF
+
+  # Create app-specific template directory
+  mkdir -p "templates/${app_name}"
+  touch "templates/${app_name}/__init__.py"
 }
 
 # --- Main Script ---
@@ -87,11 +110,37 @@ if [ -d "$project_name" ]; then
     exit 1
 fi
 
-# --- Create Project Directory ---
+# --- Create Project Directory and Setup ---
 echo -e "${GREEN}Creating project directory...${RESET}"
 mkdir "$project_name"
 echo "mkdir $project_name"
 cd "$project_name"
+
+# --- Create Django Project First ---
+echo -e "${GREEN}Creating Django project...${RESET}"
+django-admin startproject core .
+
+# --- Copy Core Templates ---
+echo -e "${GREEN}Copying core templates...${RESET}"
+if [ -d "$ROOT_DIR/saas_starter_templates/core" ]; then
+    cp -r "$ROOT_DIR/saas_starter_templates/core/." core/
+    echo "Copied core templates"
+fi
+
+# --- Create Apps ---
+echo -e "${GREEN}Creating apps...${RESET}"
+apps=(public dashboard users common)
+for app in "${apps[@]}"; do
+  create_app "$app"
+  # Initialize __init__.py
+  touch "${app}/__init__.py"
+done
+
+# --- Copy Templates After Apps Creation ---
+echo -e "${GREEN}Copying template structure from saas_starter_templates...${RESET}"
+mkdir -p templates
+cp -r "$ROOT_DIR/saas_starter_templates/." templates/
+echo "Copied templates from $ROOT_DIR/saas_starter_templates to templates directory"
 
 # --- Create docker-compose.yml ---
 echo -e "${GREEN}Creating docker-compose.yml...${RESET}"
@@ -173,17 +222,6 @@ staticfiles
 .venv
 venv
 EOF
-
-# --- Create Django Project ---
-echo -e "${GREEN}Creating Django project...${RESET}"
-django-admin startproject core .
-
-# --- Create Apps ---
-echo -e "${GREEN}Creating apps...${RESET}"
-apps=(public dashboard users common)  # Changed 'admin' to 'dashboard'
-for app in "${apps[@]}"; do
-  create_app "$app"
-done
 
 # --- Create Project-Level Directories ---
 echo -e "${GREEN}Creating Project-Level Directories...${RESET}"
@@ -326,57 +364,6 @@ EOF
 # --- Create tracking file ---
 echo -e "${GREEN}Creating tracking file...${RESET}"
 echo "{\"project_name\": \"$project_name\"}" > "$ROOT_DIR/saas_starter_tracking.json"
-file in the 
-# --- Create templates directory structure ---
-echo -e "${GREEN}Creating template structure...${RESET}"
-mkdir -p templates/public
-mkdir -p templates/dashboard
-mkdir -p templates/users
-
-# Create base template
-cat > templates/base.html <<EOF
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{% block title %}{% endblock %}</title>
-</head>
-<body>
-    {% block content %}{% endblock %}
-</body>
-</html>
-EOF
-
-# Create homepage template
-cat > templates/public/home.html <<EOF
-{% extends "base.html" %}
-
-{% block title %}Welcome{% endblock %}
-
-{% block content %}
-    <h1>Welcome to ${project_name}</h1>
-    <p>Your application is running successfully!</p>
-{% endblock %}
-EOF
-
-# Configure public/views.py
-cat > public/views.py <<EOF
-from django.views.generic import TemplateView
-
-class HomeView(TemplateView):
-    template_name = 'public/home.html'
-EOF
-
-# Configure public/urls.py
-cat > public/urls.py <<EOF
-from django.urls import path
-from . import views
-
-app_name = 'public'
-
-urlpatterns = [
-    path('', views.HomeView.as_view(), name='home'),
-]
-EOF
 
 # --- Build and start the application using Docker Compose ---
 echo -e "${GREEN}Building and starting the application...${RESET}"
