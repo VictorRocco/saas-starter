@@ -11,11 +11,14 @@ MIN_PIP_VERSION := 22.0
 MIN_DOCKER_VERSION := 24.0
 MIN_DOCKER_COMPOSE_VERSION := 2.30
 
-# --- Colors ---
+# Colors
 RED := \033[0;31m
 GREEN := \033[0;32m
 YELLOW := \033[0;33m
 RESET := \033[0m
+
+# Scripts directory
+SCRIPTS_DIR := saas_starter_scripts
 
 # --- Load tracking information ---
 load_tracking_info = $(if $(wildcard ../saas_starter_tracking.json), \
@@ -24,24 +27,6 @@ load_tracking_info = $(if $(wildcard ../saas_starter_tracking.json), \
 $(call load_tracking_info)
 
 # --- Helper functions ---
-define check_version
-	@if ! which $(1) > /dev/null 2>&1; then \
-		echo "$(RED)❌ $(1) is not installed$(RESET)"; \
-		exit 1; \
-	else \
-		printf '%s✅ %s is installed at %s%s\n' "$(GREEN)" "$(1)" "$$(which $(1))" "$(RESET)"; \
-	fi
-endef
-
-define check_python_version
-	@python3 -c "import sys; \
-	current=tuple(map(int, '$(shell python3 --version | cut -d' ' -f2)'.split('.'))); \
-	minimum=tuple(map(int, '$(MIN_PYTHON_VERSION)'.split('.'))); \
-	exit(0 if current >= minimum else 1)" 2>/dev/null || \
-	(echo "$(RED)❌ Python version must be >= $(MIN_PYTHON_VERSION)$(RESET)"; exit 1) && \
-	echo "$(GREEN)✅ Python version is $(shell python3 --version | cut -d' ' -f2)$(RESET)"
-endef
-
 define check_docker_compose_file
 	@if [ ! -f "$(PROJECT)/docker-compose.yml" ]; then \
 		echo "❌ docker-compose.yml not found in $(PROJECT)/. Run 'make build' first."; \
@@ -51,7 +36,7 @@ endef
 
 # --- Targets ---
 
-.PHONY: help build up down logs weblogs dblogs clean migrate makemigrations shell superuser collectstatic test check check_docker_compose_file ps destroy
+.PHONY: help build up down logs weblogs dblogs clean migrate makemigrations shell createsuperuser collectstatic test check ps destroy
 
 help:
 	@echo "Available commands:"
@@ -62,132 +47,63 @@ help:
 	@echo "  make weblogs        - View logs from the 'web' service (your Django app)"
 	@echo "  make dblogs         - View logs from the 'db' service (your database)"
 	@echo "  make clean          - Remove the project"
-	@echo "  make migrate        - Run database migrations."
-	@echo "  make makemigrations - Create database migrations."
-	@echo "  make shell          - Open a Django shell inside the web container."
-	@echo "  make createsuperuser- Create a superuser."
-	@echo "  make collectstatic  - Collect static files."
-	@echo "  make test           - Run tests."
-	@echo "  make check          - Check system dependencies."
-	@echo "  make ps             - Show the status of running services."
+	@echo "  make migrate        - Run database migrations"
+	@echo "  make makemigrations - Create database migrations"
+	@echo "  make shell          - Open a Django shell inside the web container"
+	@echo "  make createsuperuser- Create a superuser"
+	@echo "  make collectstatic  - Collect static files"
+	@echo "  make test           - Run tests"
+	@echo "  make check          - Check system dependencies"
+	@echo "  make ps             - Show the status of running services"
 	@echo "  make destroy        - Permanently destroy the project (cannot be undone!)"
 
 check:
-	@echo "Checking system dependencies..."
-	@bash -c 'set -e; \
-        if ! which python3 > /dev/null 2>&1; then \
-            printf "$(RED)❌ python3 is not installed$(RESET)\n"; \
-            exit 1; \
-        else \
-            printf "$(GREEN)✅ python3 is installed at %s$(RESET)\n" "$$(which python3)"; \
-        fi; \
-        CURRENT_PYTHON_VERSION=$$(python3 -c "import sys; print(sys.version_info[0:2][0], sys.version_info[0:2][1])"); \
-        if ! python3 -c "import sys; exit(0 if sys.version_info[:2] >= (3,8) else 1)" 2>/dev/null; then \
-            printf "$(RED)❌ Python version %s is not sufficient (required >= $(MIN_PYTHON_VERSION))$(RESET)\n" "$$CURRENT_PYTHON_VERSION"; \
-            exit 1; \
-        else \
-            printf "$(GREEN)✅ Python version is %s$(RESET)\n" "$$CURRENT_PYTHON_VERSION"; \
-        fi; \
-        if ! which pip3 > /dev/null 2>&1; then \
-            printf "$(RED)❌ pip3 is not installed$(RESET)\n"; \
-            exit 1; \
-        else \
-            printf "$(GREEN)✅ pip3 is installed at %s$(RESET)\n" "$$(which pip3)"; \
-        fi; \
-        if ! which docker > /dev/null 2>&1; then \
-            printf "$(RED)❌ docker is not installed$(RESET)\n"; \
-            exit 1; \
-        else \
-            printf "$(GREEN)✅ docker is installed at %s$(RESET)\n" "$$(which docker)"; \
-        fi; \
-        if ! docker compose version > /dev/null 2>&1; then \
-            printf "$(RED)❌ docker compose (v2) is not installed$(RESET)\n"; \
-            exit 1; \
-        else \
-            printf "$(GREEN)✅ docker compose (v2) is installed$(RESET)\n"; \
-        fi; \
-        printf "$(GREEN)✅ All system dependencies are satisfied$(RESET)\n"; \
-    '
+	@$(SCRIPTS_DIR)/make_check.sh
 
 build: check
-	./saas_starter_builder.sh
+	@$(SCRIPTS_DIR)/make_build.sh
 
 check_docker_compose_file:
 	$(call check_docker_compose_file)
 
-up: check_docker_compose_file
-	cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) up -d
+up: check
+	@$(SCRIPTS_DIR)/make_up.sh
 
 down:
-	cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) down
+	@$(SCRIPTS_DIR)/make_down.sh
 
-logs: check_docker_compose_file
-	cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) logs -f
+logs:
+	@$(SCRIPTS_DIR)/make_logs.sh
 
-weblogs: check_docker_compose_file
-	cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) logs -f web
+weblogs:
+	@$(SCRIPTS_DIR)/make_logs.sh web
 
-dblogs: check_docker_compose_file
-	cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) logs -f db
+dblogs:
+	@$(SCRIPTS_DIR)/make_logs.sh db
 
-clean: ## Stop and remove containers, networks, and volumes
-	@bash -c '\
-		TRACKING_FILE="saas_starter_tracking.json"; \
-		if [ ! -f "$$TRACKING_FILE" ]; then \
-			echo '\''$(RED)❌ No tracked active project found. Exiting.$(RESET)'\''; \
-			exit 0; \
-		fi; \
-		if [ -d "$(PROJECT)" ]; then \
-			cd "$(PROJECT)" && $(DOCKER_COMPOSE_COMMAND) down --volumes --remove-orphans -t 1; \
-		else \
-			echo "Project directory \"$(PROJECT)\" not found, continuing with cleanup."; \
-		fi; \
-		docker network prune -f 2>/dev/null || true; \
-		docker volume prune -f 2>/dev/null || true; \
-		echo "Project \"$(PROJECT)\" containers and volumes have been removed.";'
+clean:
+	@$(SCRIPTS_DIR)/make_clean.sh
 
-migrate: check_docker_compose_file
-	cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) exec web python manage.py migrate
+migrate:
+	@$(SCRIPTS_DIR)/make_django.sh migrate
 
-makemigrations: check_docker_compose_file
-	cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) exec web python manage.py makemigrations
+makemigrations:
+	@$(SCRIPTS_DIR)/make_django.sh makemigrations
 
-shell: check_docker_compose_file
-	@cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) exec web python manage.py shell_plus 2>&1 | grep -q "is not running" && echo "The 'web' service is not running.  Run 'make up' to start the application." || $(DOCKER_COMPOSE_COMMAND) exec web python manage.py shell_plus
+shell:
+	@$(SCRIPTS_DIR)/make_django.sh shell
 
-createsuperuser: check_docker_compose_file
-	cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) exec web python manage.py createsuperuser
+createsuperuser:
+	@$(SCRIPTS_DIR)/make_django.sh createsuperuser
 
-collectstatic: check_docker_compose_file
-	cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) exec web python manage.py collectstatic --noinput
+collectstatic:
+	@$(SCRIPTS_DIR)/make_django.sh collectstatic
 
-test: check_docker_compose_file
-	cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) exec web python manage.py test
+test:
+	@$(SCRIPTS_DIR)/make_django.sh test
 
-ps: check_docker_compose_file
-	cd $(PROJECT) && $(DOCKER_COMPOSE_COMMAND) ps
+ps: check
+	@$(SCRIPTS_DIR)/make_logs.sh ps
 
-destroy: clean ## Remove project directory and tracking file
-	@bash -c '\
-		TRACKING_FILE="saas_starter_tracking.json"; \
-		if [ ! -f "$$TRACKING_FILE" ]; then \
-			echo '\''$(RED)❌ No tracked active project found. Exiting.$(RESET)'\''; \
-			exit 0; \
-		fi; \
-		echo ""; \
-		echo -e '\''$(RED)WARNING: This will permanently remove the project directory "$(PROJECT)" and tracking file.$(RESET)'\''; \
-		echo -e '\''$(RED)This action CANNOT be undone.$(RESET)'\''; \
-		echo ""; \
-		read -r -p "Type '\''destroy'\'' to confirm: " confirmation; \
-		if [ "$$confirmation" != "destroy" ]; then \
-			echo "Destroy operation cancelled."; \
-			exit 0; \
-		fi; \
-		if [ -d "$(PROJECT)" ]; then \
-			rm -rf "$(PROJECT)"; \
-			echo "Project directory \"$(PROJECT)\" has been removed."; \
-		else \
-			echo "Project directory \"$(PROJECT)\" not found."; \
-		fi; \
-		rm -f "$$TRACKING_FILE"; \
-		echo "Tracking file has been removed.";'
+destroy: clean
+	@$(SCRIPTS_DIR)/make_destroy.sh
